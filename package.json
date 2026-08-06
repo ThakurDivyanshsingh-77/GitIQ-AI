@@ -1,0 +1,55 @@
+{
+  "name": "commitpilot-ai",
+  "displayName": "CommitPilot AI",
+  "description": "An AI-powered Git commit message assistant for Visual Studio Code.",
+  "version": "0.1.0",
+  "publisher": "commitpilot",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:commitPilotAI.hello",
+    "onCommand:commitPilotAI.checkGitRepository",
+    "onCommand:commitPilotAI.previewGitDiff"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "commitPilotAI.hello",
+        "title": "CommitPilot AI: Hello",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.checkGitRepository",
+        "title": "CommitPilot AI: Check Git Repository",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.previewGitDiff",
+        "title": "CommitPilot AI: Preview Git Diff",
+        "category": "CommitPilot AI"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "check": "npm run compile && npm run lint",
+    "test": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2"
+  }
+}

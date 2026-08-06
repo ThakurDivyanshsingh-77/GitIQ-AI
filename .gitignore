@@ -1,0 +1,14 @@
+# Dependencies and build output
+node_modules/
+out/
+
+# VS Code test artifacts
+.vscode-test/
+
+# Logs and operating-system files
+*.log
+.DS_Store
+Thumbs.db
+
+# Local editor configuration
+.vscode/settings.json

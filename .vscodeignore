@@ -1,0 +1,10 @@
+# Source and local-development files are not needed in the packaged extension.
+.vscode/**
+.gitignore
+.vscodeignore
+eslint.config.mjs
+src/**
+tsconfig.json
+**/*.map
+**/*.ts
+node_modules/**
