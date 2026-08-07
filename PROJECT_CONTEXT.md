@@ -11,8 +11,9 @@
 
 ### Core Features & Philosophy
 - **AI-Powered Commits**: Analyzes staged diffs and generates Conventional Commit messages. Suggestions are presented in an editable input box for developer review, then committed on Enter.
+- **AI Pull Request Generation**: Generates complete, professional PR documents with title, summary, description, files changed, testing, breaking changes, and checklist from branch diff and commit history.
 - **Commit History Explorer**: Interactive QuickPick explorer with instant search, detail viewing, AI explanations, and hash copying.
-- **GitHub Integration**: Push, pull, fetch, branch display, repository information, and direct GitHub browser navigation (SSH/HTTPS URL conversion).
+- **GitHub Integration**: Push, pull, fetch, branch display, repository information, direct GitHub browser navigation, and PR page opening.
 - **Clean Architecture**: Built with modular TypeScript services, providers, and decoupled command handlers for high maintainability and testability.
 
 ---
@@ -34,17 +35,23 @@ src/
 ├── commands/                         # VS Code Command Handlers
 │   ├── checkGitRepositoryCommand.ts  # Workspace Git verification
 │   ├── copyCommitHashCommand.ts      # Copy commit hash to clipboard
+│   ├── copyEntirePRCommand.ts        # Copy entire PR to clipboard
+│   ├── copyPRDescriptionCommand.ts   # Copy PR description to clipboard
+│   ├── copyPRTitleCommand.ts         # Copy PR title to clipboard
 │   ├── currentBranchCommand.ts       # Show current Git branch
 │   ├── explainCommitCommand.ts       # AI commit explanation workflow
 │   ├── fetchCommand.ts              # Git fetch remote updates
 │   ├── generateCommitMessageCommand.ts# Orchestrates AI suggestion UI
+│   ├── generatePullRequestCommand.ts # AI pull request generation workflow
 │   ├── helloCommand.ts               # Basic health check command
 │   ├── openBranchCommand.ts          # Open current branch on GitHub
+│   ├── openPullRequestPageCommand.ts # Open GitHub compare page
 │   ├── openRepositoryCommand.ts      # Open GitHub repo in browser
 │   ├── previewGitDiffCommand.ts      # Displays staged diff preview
 │   ├── pullCommand.ts               # Git pull from remote origin
 │   ├── pushCommand.ts               # Git push to remote origin
 │   ├── repositoryInfoCommand.ts      # Repo summary readonly document
+│   ├── savePullRequestCommand.ts     # Save PR as pull-request.md
 │   └── viewCommitHistoryCommand.ts   # Interactive commit history explorer
 ├── providers/                        # AI & Virtual Document Providers
 │   ├── AIProvider.ts                 # Abstract contract interface for AI services
@@ -53,6 +60,7 @@ src/
 │   ├── commitExplainProvider.ts      # Read-only AI explanation documents
 │   ├── GroqProvider.ts               # Groq SDK AI completion client
 │   ├── gitDiffPreviewProvider.ts     # TextDocumentContentProvider for diff preview
+│   ├── pullRequestProvider.ts       # Read-only AI pull request documents
 │   └── repoInfoProvider.ts          # Read-only repository info document
 ├── services/                         # Core Business Logic Services
 │   ├── commitMessageService.ts       # Orchestrates Diff -> Prompt -> AI -> Validator
@@ -60,7 +68,8 @@ src/
 │   ├── configService.ts              # Typed VS Code configuration manager
 │   ├── gitService.ts                 # Isolated git binary process execution
 │   ├── loggerService.ts              # Output channel logging service
-│   └── promptBuilder.ts              # Deterministic AI prompt builder
+│   ├── promptBuilder.ts              # Deterministic AI prompt builder
+│   └── pullRequestService.ts        # AI pull request orchestration service
 ├── types/                            # TypeScript interfaces & domain types
 │   ├── commit.ts                     # Commit contracts & validation schemas
 │   └── provider.ts                   # Provider identifiers & config contracts
@@ -82,17 +91,23 @@ commitpilot-ai/
 │   ├── commands/
 │   │   ├── checkGitRepositoryCommand.ts
 │   │   ├── copyCommitHashCommand.ts
+│   │   ├── copyEntirePRCommand.ts
+│   │   ├── copyPRDescriptionCommand.ts
+│   │   ├── copyPRTitleCommand.ts
 │   │   ├── currentBranchCommand.ts
 │   │   ├── explainCommitCommand.ts
 │   │   ├── fetchCommand.ts
 │   │   ├── generateCommitMessageCommand.ts
+│   │   ├── generatePullRequestCommand.ts
 │   │   ├── helloCommand.ts
 │   │   ├── openBranchCommand.ts
+│   │   ├── openPullRequestPageCommand.ts
 │   │   ├── openRepositoryCommand.ts
 │   │   ├── previewGitDiffCommand.ts
 │   │   ├── pullCommand.ts
 │   │   ├── pushCommand.ts
 │   │   ├── repositoryInfoCommand.ts
+│   │   ├── savePullRequestCommand.ts
 │   │   └── viewCommitHistoryCommand.ts
 │   ├── providers/
 │   │   ├── AIProvider.ts
@@ -101,6 +116,7 @@ commitpilot-ai/
 │   │   ├── commitExplainProvider.ts
 │   │   ├── GroqProvider.ts
 │   │   ├── gitDiffPreviewProvider.ts
+│   │   ├── pullRequestProvider.ts
 │   │   └── repoInfoProvider.ts
 │   ├── services/
 │   │   ├── commitMessageService.ts
@@ -108,7 +124,8 @@ commitpilot-ai/
 │   │   ├── configService.ts
 │   │   ├── gitService.ts
 │   │   ├── loggerService.ts
-│   │   └── promptBuilder.ts
+│   │   ├── promptBuilder.ts
+│   │   └── pullRequestService.ts
 │   ├── types/
 │   │   ├── commit.ts
 │   │   └── provider.ts
@@ -167,18 +184,25 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 | `commitPilotAI.repositoryInfo` | `CommitPilot AI: Repository Information` | Shows repo name, branch, remote URL, latest commit, total commits, and git status in a read-only Markdown document. |
 | `commitPilotAI.openRepository` | `CommitPilot AI: Open GitHub Repository` | Detects origin URL (SSH/HTTPS), converts to browser URL, and opens in default browser. |
 | `commitPilotAI.openBranch` | `CommitPilot AI: Open Current Branch on GitHub` | Opens `https://github.com/user/repo/tree/current-branch` in default browser. |
+| `commitPilotAI.generatePullRequest` | `CommitPilot AI: Generate Pull Request` | Generates complete AI-powered PR document from branch diff and commit history. |
+| `commitPilotAI.copyPRTitle` | `CommitPilot AI: Copy PR Title` | Copies the generated PR title to clipboard. |
+| `commitPilotAI.copyPRDescription` | `CommitPilot AI: Copy PR Description` | Copies the generated PR description to clipboard. |
+| `commitPilotAI.copyEntirePR` | `CommitPilot AI: Copy Entire Pull Request` | Copies the full generated PR Markdown to clipboard. |
+| `commitPilotAI.savePullRequest` | `CommitPilot AI: Save Pull Request` | Saves generated PR as `pull-request.md` in project root. |
+| `commitPilotAI.openPullRequestPage` | `CommitPilot AI: Open Pull Request Page` | Opens GitHub compare URL (`/compare/main...currentBranch`) for PR creation. |
 
 ### Virtual Scheme Registration
 - **`commitpilot-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
 - **`commitpilot-commit-details:`**: `CommitDetailsProvider` (Read-only commit detail and stats document).
 - **`commitpilot-commit-explain:`**: `CommitExplainProvider` (Read-only Markdown document for AI commit explanations).
 - **`commitpilot-repo-info:`**: `RepoInfoProvider` (Read-only Markdown document for repository information summary).
+- **`commitpilot-pull-request:`**: `PullRequestProvider` (Read-only Markdown document for AI-generated pull requests).
 
 ---
 
 ## 6. Current Status & Changelog
 
-### Current Status: Phase 9 GitHub Integration Completed (`v0.1.0`)
+### Current Status: Phase 10 AI Pull Request Assistant Completed (`v0.1.0`)
 - [x] Complete TypeScript structure & strict compiler setup.
 - [x] Extension activation lifecycle & command registration in `extension.ts`.
 - [x] Dedicated Output Channel logging via `LoggerService` ("CommitPilot AI").
@@ -197,6 +221,12 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 - [x] Current branch display (`getCurrentBranch`) including detached HEAD detection.
 - [x] Repository information summary document (`getRepositoryInfo` & `RepoInfoProvider`).
 - [x] GitHub browser navigation: Open Repository and Open Current Branch via SSH/HTTPS URL conversion.
+- [x] AI Pull Request generation with structured prompt, title/description parsing, and validation.
+- [x] Copy PR Title, Copy PR Description, Copy Entire PR clipboard commands.
+- [x] Save Pull Request as `pull-request.md` to project root.
+- [x] Open GitHub compare page for PR creation.
+- [x] Default branch detection (`getDefaultBranch`) via `symbolic-ref` and heuristic fallback.
+- [x] Branch diff (`getBranchDiff`) and branch commits (`getBranchCommits`) for PR context.
 - [x] Code quality verification (`npm run check`) passing with zero errors or warnings.
 
 ---
@@ -208,7 +238,7 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 - [ ] **Custom Prompt Templates**: Allow users to define custom instructions or commit style rules in settings.
 - [ ] **Source Control UI Integration**: Add an inline button to the VS Code Source Control (SCM) panel to generate commit messages directly into the SCM input box.
 - [ ] **Unit / Integration Tests**: Add automated unit test suite (`vscode-test` / `mocha`).
-- [ ] **GitHub PR Integration**: Create/view pull requests from within VS Code.
+- [x] **GitHub PR Integration**: AI Pull Request generation with copy, save, and compare page features (Phase 10).
 
 ### Known Issues
 - *None currently identified.*

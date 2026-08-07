@@ -67,6 +67,50 @@ export class PromptBuilder {
 		};
 	}
 
+	/** Formats commit history + branch diff into a structured pull request generation prompt. */
+	public buildPullRequestPrompt(commits: string, branchDiff: string, currentBranch: string, defaultBranch: string): PromptBuildResult {
+		const normalizedDiff = this.normalizeDiff(branchDiff);
+		const { truncatedContent, isTruncated } = this.truncateDiff(normalizedDiff);
+
+		const prompt = [
+			'You are an expert Pull Request writer.',
+			'Generate a complete, professional Pull Request document based on the commit history and branch diff provided.',
+			'',
+			'CRITICAL FORMATTING RULES:',
+			'1. Use Markdown formatting.',
+			'2. Include these sections in this exact order with these exact headings:',
+			'   - # Pull Request',
+			'   - ## Title (a single short imperative PR title line, prefixed with conventional commit type)',
+			'   - ## Summary (a concise 2-5 sentence overview)',
+			'   - ## Detailed Description (comprehensive explanation of changes)',
+			'   - ## Files Changed (bulleted list of modified files)',
+			'   - ## Testing Performed (bulleted list of testing steps)',
+			'   - ## Breaking Changes (list or "None")',
+			'   - ## Checklist (markdown checklist items)',
+			'   - ## Known Limitations (list or "None")',
+			'3. Separate each section with --- (horizontal rule).',
+			'4. Be specific and reference actual file names and changes from the diff.',
+			'5. The PR Title should be a single line, maximum 72 characters.',
+			'',
+			`Branch: ${currentBranch} → ${defaultBranch}`,
+			'',
+			'--- COMMIT HISTORY ---',
+			commits || '(No commits found)',
+			'--- END COMMIT HISTORY ---',
+			'',
+			'--- BRANCH DIFF ---',
+			truncatedContent,
+			'--- END BRANCH DIFF ---'
+		].join('\n');
+
+		return {
+			prompt,
+			isTruncated,
+			originalLength: normalizedDiff.length,
+			truncatedLength: truncatedContent.length
+		};
+	}
+
 	/** Normalizes line endings while preserving semantic diff content. */
 	private normalizeDiff(stagedDiff: string): string {
 		return stagedDiff.replace(/\r\n/g, '\n').trim();

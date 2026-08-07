@@ -1,12 +1,19 @@
 # CommitPilot AI
 
-CommitPilot AI is an AI-powered Git commit assistant, history explorer, and GitHub integration for Visual Studio Code. It previews staged changes, generates editable Conventional Commit messages via Groq AI, executes commits, explores commit history, explains commit diffs in plain English, and provides full Git + GitHub workflow commands.
+CommitPilot AI is an AI-powered Git commit assistant, history explorer, pull request generator, and GitHub integration for Visual Studio Code. It previews staged changes, generates editable Conventional Commit messages via Groq AI, executes commits, explores commit history, explains commit diffs in plain English, generates complete pull requests, and provides full Git + GitHub workflow commands.
 
 ## Features
 
 ### AI-Powered
 - **Generate Conventional Commit Messages**: Analyzes staged diffs and generates structured Conventional Commit suggestions (`feat:`, `fix:`, `refactor:`, etc.).
 - **AI Commit Explanation**: Generates plain English explanations of any commit (purpose, affected files, major changes, impact).
+- **AI Pull Request Generation**: Generates complete, professional pull request documents with title, summary, detailed description, files changed, testing, breaking changes, checklist, and known limitations.
+
+### Pull Request Workflow
+- **Generate Pull Request**: AI-powered PR document from branch diff and commit history.
+- **Copy PR Title / Description / Entire PR**: Quick clipboard actions for pasting into GitHub.
+- **Save Pull Request**: Save generated PR as `pull-request.md` in the project root.
+- **Open Pull Request Page**: Automatically open `https://github.com/<owner>/<repo>/compare/main...currentBranch`.
 
 ### Git History
 - **View Commit History**: Interactive QuickPick explorer (`git log -n 20`) with instant search/filtering by subject, author, or commit hash.
@@ -46,6 +53,12 @@ CommitPilot AI is an AI-powered Git commit assistant, history explorer, and GitH
 | `CommitPilot AI: Repository Information` | `commitPilotAI.repositoryInfo` |
 | `CommitPilot AI: Open GitHub Repository` | `commitPilotAI.openRepository` |
 | `CommitPilot AI: Open Current Branch on GitHub` | `commitPilotAI.openBranch` |
+| `CommitPilot AI: Generate Pull Request` | `commitPilotAI.generatePullRequest` |
+| `CommitPilot AI: Copy PR Title` | `commitPilotAI.copyPRTitle` |
+| `CommitPilot AI: Copy PR Description` | `commitPilotAI.copyPRDescription` |
+| `CommitPilot AI: Copy Entire Pull Request` | `commitPilotAI.copyEntirePR` |
+| `CommitPilot AI: Save Pull Request` | `commitPilotAI.savePullRequest` |
+| `CommitPilot AI: Open Pull Request Page` | `commitPilotAI.openPullRequestPage` |
 
 ## Quality & Build Commands
 

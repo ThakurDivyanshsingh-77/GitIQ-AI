@@ -416,6 +416,102 @@ export class GitService {
 		};
 	}
 
+	/** Detects the default branch (main or master) by checking local refs. */
+	public async getDefaultBranch(workspacePath: string): Promise<string> {
+		this.logger?.info('Detecting default branch (main/master)...');
+
+		// Try to identify the remote HEAD
+		try {
+			const { stdout } = await execFileAsync(
+				'git',
+				['symbolic-ref', 'refs/remotes/origin/HEAD', '--short'],
+				{ cwd: workspacePath, windowsHide: true }
+			);
+			const branch = stdout.trim().replace(/^origin\//, '');
+			if (branch) {
+				this.logger?.info(`Default branch detected via remote HEAD: ${branch}`);
+				return branch;
+			}
+		} catch {
+			// Fallback to heuristic
+		}
+
+		// Heuristic: check if 'main' or 'master' exist as remote branches
+		for (const candidate of ['main', 'master']) {
+			try {
+				await execFileAsync(
+					'git',
+					['rev-parse', '--verify', `origin/${candidate}`],
+					{ cwd: workspacePath, windowsHide: true }
+				);
+				this.logger?.info(`Default branch detected via heuristic: ${candidate}`);
+				return candidate;
+			} catch {
+				// Try next candidate
+			}
+		}
+
+		this.logger?.warn('Could not detect default branch, falling back to "main".');
+		return 'main';
+	}
+
+	/** Returns the diff between the current branch and the default branch (`git diff origin/<default>...HEAD`). */
+	public async getBranchDiff(workspacePath: string): Promise<string> {
+		const defaultBranch = await this.getDefaultBranch(workspacePath);
+		this.logger?.info(`Generating branch diff (origin/${defaultBranch}...HEAD)...`);
+
+		try {
+			const { stdout } = await execFileAsync(
+				'git',
+				['diff', `origin/${defaultBranch}...HEAD`],
+				{
+					cwd: workspacePath,
+					windowsHide: true,
+					maxBuffer: 20 * 1024 * 1024
+				}
+			);
+
+			const filtered = this.filterDiffContent(stdout.toString());
+			return filtered.trim();
+		} catch (error: unknown) {
+			const details = error instanceof Error ? error.message : String(error);
+			this.logger?.error(`Branch diff failed: ${details}`);
+			throw new GitCommitError(`Unable to compute branch diff: ${details}`);
+		}
+	}
+
+	/** Returns oneline commit log between the current branch and the default branch. */
+	public async getBranchCommits(workspacePath: string): Promise<string> {
+		const defaultBranch = await this.getDefaultBranch(workspacePath);
+		this.logger?.info(`Fetching branch commits (origin/${defaultBranch}..HEAD)...`);
+
+		try {
+			const { stdout } = await execFileAsync(
+				'git',
+				['log', `origin/${defaultBranch}..HEAD`, '--oneline'],
+				{
+					cwd: workspacePath,
+					windowsHide: true
+				}
+			);
+
+			return stdout.trim();
+		} catch (error: unknown) {
+			const details = error instanceof Error ? error.message : String(error);
+			this.logger?.error(`Branch commits fetch failed: ${details}`);
+			throw new GitCommitError(`Unable to fetch branch commits: ${details}`);
+		}
+	}
+
+	/** Builds a GitHub compare URL for creating a pull request (`/compare/main...currentBranch`). */
+	public async getCompareUrl(workspacePath: string): Promise<string> {
+		const webUrl = await this.getGitHubWebUrl(workspacePath);
+		const defaultBranch = await this.getDefaultBranch(workspacePath);
+		const currentBranch = await this.getCurrentBranch(workspacePath);
+
+		return `${webUrl}/compare/${encodeURIComponent(defaultBranch)}...${encodeURIComponent(currentBranch)}`;
+	}
+
 	/**
 	 * Fallback secondary filter to strip any diff blocks matching generated/lock files.
 	 */

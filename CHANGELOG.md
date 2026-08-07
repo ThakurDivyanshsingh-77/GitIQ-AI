@@ -6,20 +6,23 @@ All notable changes to CommitPilot AI will be documented in this file.
 
 ### Added
 
+- **Phase 10 - AI Pull Request Assistant**:
+  - `CommitPilot AI: Generate Pull Request` command (`commitPilotAI.generatePullRequest`) generating complete PR documents with AI from branch diff and commit history.
+  - `CommitPilot AI: Copy PR Title` command (`commitPilotAI.copyPRTitle`) copying generated PR title to clipboard.
+  - `CommitPilot AI: Copy PR Description` command (`commitPilotAI.copyPRDescription`) copying PR description to clipboard.
+  - `CommitPilot AI: Copy Entire Pull Request` command (`commitPilotAI.copyEntirePR`) copying full PR Markdown to clipboard.
+  - `CommitPilot AI: Save Pull Request` command (`commitPilotAI.savePullRequest`) saving PR as `pull-request.md` in project root.
+  - `CommitPilot AI: Open Pull Request Page` command (`commitPilotAI.openPullRequestPage`) opening GitHub compare URL for PR creation.
+  - `PullRequestService` with `generatePullRequest()`, `parsePullRequest()`, `validatePullRequest()`.
+  - `PullRequestProvider` virtual document for read-only PR Markdown preview.
+  - `PromptBuilder.buildPullRequestPrompt()` for structured PR generation prompts.
+  - `GitService` extended with `getDefaultBranch()`, `getBranchDiff()`, `getBranchCommits()`, `getCompareUrl()`.
+
 - **Phase 9 - GitHub Integration**:
-  - `CommitPilot AI: Push Branch` command (`commitPilotAI.push`) with progress notification and error handling for no remote, auth failures, and push rejections.
-  - `CommitPilot AI: Pull Branch` command (`commitPilotAI.pull`) with progress notification and merge conflict detection.
-  - `CommitPilot AI: Fetch Updates` command (`commitPilotAI.fetch`) fetching remote references.
-  - `CommitPilot AI: Show Current Branch` command (`commitPilotAI.currentBranch`) displaying the active branch name.
-  - `CommitPilot AI: Repository Information` command (`commitPilotAI.repositoryInfo`) showing repo name, branch, remote URL, latest commit, total commits, and git status in a read-only Markdown document.
-  - `CommitPilot AI: Open GitHub Repository` command (`commitPilotAI.openRepository`) converting SSH/HTTPS remote URLs to browser URLs and opening in default browser.
-  - `CommitPilot AI: Open Current Branch on GitHub` command (`commitPilotAI.openBranch`) opening the current branch tree URL on GitHub.
+  - Push, Pull, Fetch, Current Branch, Repository Info, Open GitHub Repo, Open Branch on GitHub.
 
 - **Phase 8 - Commit History Explorer & AI Commit Explanation**:
-  - `CommitPilot AI: View Commit History` command with interactive QuickPick search.
-  - Read-only commit detail viewer (`CommitDetailsProvider`).
-  - `CommitPilot AI: Explain Commit` command generating plain English AI explanations.
-  - `CommitPilot AI: Copy Commit Hash` command copying hashes to clipboard.
+  - View Commit History, Commit Details, AI Explain Commit, Copy Commit Hash.
 
 - **Phases 1–7**:
-  - Initial TypeScript extension foundation, Groq AI completion integration, Conventional Commit generation, dedicated Output Channel logging, production polish, and sanitization/validation.
+  - Initial TypeScript extension foundation, Groq AI integration, Conventional Commit generation, dedicated Output Channel logging, production polish, and sanitization/validation.

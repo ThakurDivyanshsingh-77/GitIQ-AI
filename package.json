@@ -25,7 +25,13 @@
     "onCommand:commitPilotAI.repositoryInfo",
     "onCommand:commitPilotAI.currentBranch",
     "onCommand:commitPilotAI.openRepository",
-    "onCommand:commitPilotAI.openBranch"
+    "onCommand:commitPilotAI.openBranch",
+    "onCommand:commitPilotAI.generatePullRequest",
+    "onCommand:commitPilotAI.copyPRTitle",
+    "onCommand:commitPilotAI.copyPRDescription",
+    "onCommand:commitPilotAI.copyEntirePR",
+    "onCommand:commitPilotAI.savePullRequest",
+    "onCommand:commitPilotAI.openPullRequestPage"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -98,6 +104,36 @@
       {
         "command": "commitPilotAI.openBranch",
         "title": "CommitPilot AI: Open Current Branch on GitHub",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.generatePullRequest",
+        "title": "CommitPilot AI: Generate Pull Request",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.copyPRTitle",
+        "title": "CommitPilot AI: Copy PR Title",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.copyPRDescription",
+        "title": "CommitPilot AI: Copy PR Description",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.copyEntirePR",
+        "title": "CommitPilot AI: Copy Entire Pull Request",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.savePullRequest",
+        "title": "CommitPilot AI: Save Pull Request",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.openPullRequestPage",
+        "title": "CommitPilot AI: Open Pull Request Page",
         "category": "CommitPilot AI"
       }
     ],

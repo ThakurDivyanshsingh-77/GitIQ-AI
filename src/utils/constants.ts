@@ -68,7 +68,13 @@ export const COMMAND_IDS = {
 	repositoryInfo: 'commitPilotAI.repositoryInfo',
 	currentBranch: 'commitPilotAI.currentBranch',
 	openRepository: 'commitPilotAI.openRepository',
-	openBranch: 'commitPilotAI.openBranch'
+	openBranch: 'commitPilotAI.openBranch',
+	generatePullRequest: 'commitPilotAI.generatePullRequest',
+	copyPRTitle: 'commitPilotAI.copyPRTitle',
+	copyPRDescription: 'commitPilotAI.copyPRDescription',
+	copyEntirePR: 'commitPilotAI.copyEntirePR',
+	savePullRequest: 'commitPilotAI.savePullRequest',
+	openPullRequestPage: 'commitPilotAI.openPullRequestPage'
 } as const;
 
 /** Human-readable names used when presenting provider choices in UI. */
