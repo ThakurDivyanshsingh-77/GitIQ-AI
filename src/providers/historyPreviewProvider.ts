@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
  * Provides in-memory, read-only Markdown documents for Commit History Analytics.
  */
 export class HistoryPreviewProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
-	public static readonly scheme = 'commitpilot-history';
+	public static readonly scheme = 'gitiq-history';
 
 	private readonly changeEmitter = new vscode.EventEmitter<vscode.Uri>();
 	private readonly contentMap = new Map<string, string>();

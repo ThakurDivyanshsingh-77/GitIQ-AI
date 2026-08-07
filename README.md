@@ -1,84 +1,204 @@
-# CommitPilot AI
+<div align="center">
 
-CommitPilot AI is an AI-powered Git commit assistant, history explorer, pull request generator, history analytics engine, and GitHub integration for Visual Studio Code. It previews staged changes, generates editable Conventional Commit messages via Groq AI, executes commits, explores commit history, explains commit diffs in plain English, generates complete pull requests, provides offline Git history analytics, and manages secure API key storage and Groq models.
+<img src="icon.png" alt="GitIQ Logo" width="128" height="128" />
 
-## Features
+# GitIQ
 
-### Secure Settings & Configuration
-- **Secure API Key Manager**: Store Groq API keys safely in VS Code `SecretStorage` (`vscode.SecretStorage`). Keys are never saved in plain text in `settings.json`.
-- **Automatic Migration**: Detects legacy API keys in `settings.json` and offers one-click migration to secure `SecretStorage`.
-- **Groq Model Selector**: QuickPick model selector supporting `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b`, and `deepseek-r1-distill-llama-70b`.
+AI-Powered Git Assistant for Visual Studio Code
 
-### AI-Powered
-- **Generate Conventional Commit Messages**: Analyzes staged diffs and generates structured Conventional Commit suggestions (`feat:`, `fix:`, `refactor:`, etc.).
-- **AI Commit Explanation**: Generates plain English explanations of any commit (purpose, affected files, major changes, impact).
-- **AI Pull Request Generation**: Generates complete, professional pull request documents with title, summary, detailed description, files changed, testing, breaking changes, checklist, and known limitations.
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![VS Code](https://img.shields.io/badge/VS_Code-1.95+-007ACC)
+![License](https://img.shields.io/badge/license-MIT-green)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6)
 
-### Offline Commit History Analytics (Git CLI)
-- **Search Commit History**: Offline search across commit subjects and author metadata via Git CLI (`git log --all --grep`).
-- **Commit Statistics**: Aggregates total commits, today's commits, last 7/30 days, average commits/day, repo age, first/latest commit dates, and branch name.
-- **Top Contributors**: Ranked contributor commit counts computed offline via `git shortlog -sn`.
-- **Commit Activity**: 7-day commit activity breakdown rendered as a Markdown table.
-- **Export Report**: Export a complete Markdown analytics report to `commit-history-report.md` in the project root.
+---
 
-### Pull Request Workflow
-- **Generate Pull Request**: AI-powered PR document from branch diff and commit history.
-- **Copy PR Title / Description / Entire PR**: Quick clipboard actions for pasting into GitHub.
-- **Save Pull Request**: Save generated PR as `pull-request.md` in the project root.
-- **Open Pull Request Page**: Automatically open `https://github.com/<owner>/<repo>/compare/main...currentBranch`.
+*Transform your Git workflow with automated Conventional Commit generation, AI commit explanations, professional Pull Request creation, offline commit analytics, and seamless GitHub integration.*
 
-### Git History
-- **View Commit History**: Interactive QuickPick explorer (`git log -n 20`) with instant search/filtering by subject, author, or commit hash.
-- **Commit Details Viewer**: Inspect commit statistics (`git show <hash> --stat`) in a read-only document.
-- **Copy Commit Hash**: QuickPick command to copy commit hashes directly to clipboard.
+</div>
 
-### Git Workflow & GitHub Integration
-- **Push Branch**: Push current branch to remote origin with progress notification.
-- **Pull Branch**: Pull latest changes from remote origin with merge conflict detection.
-- **Fetch Updates**: Fetch remote references (`git fetch`) with status notification.
-- **Show Current Branch**: Display the currently checked-out branch name.
-- **Repository Information**: Read-only Markdown document with repo name, branch, remote URL, latest commit, total commits, and working tree status.
-- **Open GitHub Repository**: Convert origin URL to HTTPS and open in browser.
-- **Open Current Branch on GitHub**: Open `https://github.com/user/repo/tree/current-branch`.
+---
 
-## Commands Contributed
+## 📖 Overview
 
-| Command | ID |
+**GitIQ** is an extension for Visual Studio Code designed to elevate developer productivity and standardize version control practices. By inspecting your staged Git diffs and repository history, GitIQ automatically drafts concise, conventional commit messages and complete Pull Request documents using high-performance AI models powered by the **Groq API** (`llama-3.3-70b-versatile`).
+
+In addition to AI capabilities, GitIQ features a suite of **offline Git tools**—including keyword search, commit statistics, 7-day activity tables, contributor rankings, and GitHub web shortcuts—operating instantly without remote API calls.
+
+---
+
+## 🎥 Demo
+
+<div align="center">
+
+![GitIQ Demo Placeholder](images/demo.gif)
+
+*Watch GitIQ generate conventional commit messages and pull requests in real time.*
+
+</div>
+
+---
+
+## 📸 Screenshots
+
+| Feature | Preview |
 | :--- | :--- |
-| `CommitPilot AI: Hello` | `commitPilotAI.hello` |
-| `CommitPilot AI: Check Git Repository` | `commitPilotAI.checkGitRepository` |
-| `CommitPilot AI: Preview Git Diff` | `commitPilotAI.previewGitDiff` |
-| `CommitPilot AI: Generate Commit Message` | `commitPilotAI.generateCommitMessage` |
-| `CommitPilot AI: View Commit History` | `commitPilotAI.viewCommitHistory` |
-| `CommitPilot AI: Explain Commit` | `commitPilotAI.explainCommit` |
-| `CommitPilot AI: Copy Commit Hash` | `commitPilotAI.copyCommitHash` |
-| `CommitPilot AI: Push Branch` | `commitPilotAI.push` |
-| `CommitPilot AI: Pull Branch` | `commitPilotAI.pull` |
-| `CommitPilot AI: Fetch Updates` | `commitPilotAI.fetch` |
-| `CommitPilot AI: Show Current Branch` | `commitPilotAI.currentBranch` |
-| `CommitPilot AI: Repository Information` | `commitPilotAI.repositoryInfo` |
-| `CommitPilot AI: Open GitHub Repository` | `commitPilotAI.openRepository` |
-| `CommitPilot AI: Open Current Branch on GitHub` | `commitPilotAI.openBranch` |
-| `CommitPilot AI: Generate Pull Request` | `commitPilotAI.generatePullRequest` |
-| `CommitPilot AI: Copy PR Title` | `commitPilotAI.copyPRTitle` |
-| `CommitPilot AI: Copy PR Description` | `commitPilotAI.copyPRDescription` |
-| `CommitPilot AI: Copy Entire Pull Request` | `commitPilotAI.copyEntirePR` |
-| `CommitPilot AI: Save Pull Request` | `commitPilotAI.savePullRequest` |
-| `CommitPilot AI: Open Pull Request Page` | `commitPilotAI.openPullRequestPage` |
-| `CommitPilot AI: Search Commit History` | `commitPilotAI.searchCommitHistory` |
-| `CommitPilot AI: Commit Statistics` | `commitPilotAI.commitStatistics` |
-| `CommitPilot AI: Top Contributors` | `commitPilotAI.topContributors` |
-| `CommitPilot AI: Commit Activity` | `commitPilotAI.commitActivity` |
-| `CommitPilot AI: Export History Report` | `commitPilotAI.exportHistoryReport` |
-| `CommitPilot AI: Set Groq API Key` | `commitPilotAI.setApiKey` |
-| `CommitPilot AI: Update Groq API Key` | `commitPilotAI.updateApiKey` |
-| `CommitPilot AI: Remove Groq API Key` | `commitPilotAI.removeApiKey` |
-| `CommitPilot AI: Select Groq Model` | `commitPilotAI.selectModel` |
+| **Home & Dashboard** | ![GitIQ Home](images/home.png) |
+| **AI Commit Generator** | ![AI Commit Generator](images/commit.png) |
+| **Commit History Explorer** | ![Commit History](images/history.png) |
+| **Pull Request Helper** | ![Pull Request Helper](images/pr-helper.png) |
+| **Secure Settings** | ![GitIQ Settings](images/settings.png) |
 
-## Quality & Build Commands
+---
 
-```bash
-npm run compile   # Compile TypeScript
-npm run lint      # Run ESLint checks
-npm run check     # Run compile + lint
-```
+## ✨ Key Features
+
+### 🤖 AI-Powered Productivity
+- **Conventional Commit Generator**: Drafts structured `feat:`, `fix:`, `refactor:`, `docs:`, `perf:` messages directly from your staged diffs (`git diff --cached`).
+- **AI Commit Explanation**: Explains complex commits in plain English—summarizing purpose, affected files, major changes, and potential system impact.
+- **AI Pull Request Helper**: Constructs complete, professional Pull Requests (Title, Summary, Detailed Description, Files Changed, Testing, Breaking Changes, Checklist) from branch diffs and commit histories.
+
+### 📊 Offline Git History Analytics
+- **Search Commit History**: Offline keyword search across your commit log (`git log --all --grep`).
+- **Repository Statistics**: Computes total commits, today's commits, 7-day count, 30-day count, average commits/day, repo age, and branch status.
+- **Top Contributors**: Ranks author commit counts using `git shortlog -sn`.
+- **Commit Activity**: Generates 7-day commit distribution breakdown tables.
+- **Export Report**: Saves a complete Markdown report (`commit-history-report.md`) directly to your workspace root.
+
+### 🛡️ Security & Configuration
+- **OS-Level Secret Storage**: Stores your API key safely in `vscode.SecretStorage`. Keys are never saved in plain text.
+- **Automatic Migration**: Detects legacy setting keys and migrates them to secure storage with one click.
+- **Groq Model Selector**: Switch between `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b`, and `deepseek-r1-distill-llama-70b`.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Installation
+Install GitIQ directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gitiq.gitiq) or search for `GitIQ` in the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
+
+### 2. Configure Groq API Key
+1. Obtain a free API key from [Groq Console](https://console.groq.com/).
+2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+3. Run: `GitIQ: Set Groq API Key`.
+4. Enter your key (`gsk_...`). It will be saved securely in VS Code `SecretStorage`.
+
+### 3. Basic Usage
+1. **Stage your changes**: `git add .`
+2. **Generate Commit Message**: Run `GitIQ: Generate Commit Message`.
+3. **Review & Confirm**: Edit the suggested message in the input box and press `Enter` to commit!
+
+---
+
+## 🛠️ Complete Commands Reference
+
+| Command Title | Command ID | Description |
+| :--- | :--- | :--- |
+| `GitIQ: Hello` | `gitIQ.hello` | Health check command verifying extension activation. |
+| `GitIQ: Check Git Repository` | `gitIQ.checkGitRepository` | Verifies whether the workspace is inside a Git repository. |
+| `GitIQ: Preview Git Diff` | `gitIQ.previewGitDiff` | Opens read-only virtual diff document for staged changes (`git diff --cached`). |
+| `GitIQ: Generate Commit Message` | `gitIQ.generateCommitMessage` | Analyzes staged changes with AI and presents editable commit box. |
+| `GitIQ: View Commit History` | `gitIQ.viewCommitHistory` | Displays recent commits (`git log -n 20`) in QuickPick with details viewer. |
+| `GitIQ: Explain Commit` | `gitIQ.explainCommit` | Generates a plain English AI explanation of any commit. |
+| `GitIQ: Copy Commit Hash` | `gitIQ.copyCommitHash` | Copies selected commit hash to system clipboard. |
+| `GitIQ: Push Branch` | `gitIQ.push` | Pushes current branch to remote origin with progress notification. |
+| `GitIQ: Pull Branch` | `gitIQ.pull` | Pulls latest changes from remote origin with conflict detection. |
+| `GitIQ: Fetch Updates` | `gitIQ.fetch` | Fetches remote references (`git fetch`). |
+| `GitIQ: Show Current Branch` | `gitIQ.currentBranch` | Displays active checked-out branch name. |
+| `GitIQ: Repository Information` | `gitIQ.repositoryInfo` | Opens read-only Markdown document summarizing repository metadata. |
+| `GitIQ: Open GitHub Repository` | `gitIQ.openRepository` | Detects origin URL and opens repository in default browser. |
+| `GitIQ: Open Current Branch on GitHub` | `gitIQ.openBranch` | Opens active branch on GitHub in default browser. |
+| `GitIQ: Generate Pull Request` | `gitIQ.generatePullRequest` | Generates complete AI Pull Request document from branch diff & history. |
+| `GitIQ: Copy PR Title` | `gitIQ.copyPRTitle` | Copies generated PR title to clipboard. |
+| `GitIQ: Copy PR Description` | `gitIQ.copyPRDescription` | Copies generated PR description Markdown to clipboard. |
+| `GitIQ: Copy Entire Pull Request` | `gitIQ.copyEntirePR` | Copies full generated PR document to clipboard. |
+| `GitIQ: Save Pull Request` | `gitIQ.savePullRequest` | Saves generated PR as `pull-request.md` in workspace root. |
+| `GitIQ: Open Pull Request Page` | `gitIQ.openPullRequestPage` | Opens GitHub compare URL (`/compare/main...currentBranch`) in browser. |
+| `GitIQ: Search Commit History` | `gitIQ.searchCommitHistory` | Offline keyword search across commit messages (`git log --all --grep`). |
+| `GitIQ: Commit Statistics` | `gitIQ.commitStatistics` | Aggregates repository commit metrics and age statistics. |
+| `GitIQ: Top Contributors` | `gitIQ.topContributors` | Displays ranked contributor commit counts using `git shortlog -sn`. |
+| `GitIQ: Commit Activity` | `gitIQ.commitActivity` | Displays 7-day commit activity breakdown as a Markdown table. |
+| `GitIQ: Export History Report` | `gitIQ.exportHistoryReport` | Exports complete Markdown analytics report to `commit-history-report.md`. |
+| `GitIQ: Set Groq API Key` | `gitIQ.setApiKey` | Prompts for Groq API key and stores securely in VS Code `SecretStorage`. |
+| `GitIQ: Update Groq API Key` | `gitIQ.updateApiKey` | Reuses secure prompt flow to update stored API key. |
+| `GitIQ: Remove Groq API Key` | `gitIQ.removeApiKey` | Deletes stored API key from `SecretStorage` after confirmation. |
+| `GitIQ: Select Groq Model` | `gitIQ.selectModel` | Displays QuickPick selector for supported Groq models. |
+
+---
+
+## ⚙️ Configuration
+
+GitIQ provides customizable configuration settings under the `gitIQ` section in Settings:
+
+| Setting Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `gitIQ.apiKey` | `string` | `""` | Legacy fallback key for Groq API authentication. Keys are stored in `SecretStorage`. |
+| `gitIQ.provider` | `enum` | `"groq"` | Active AI provider (`groq`, `openai`, `gemini`, `ollama`). |
+| `gitIQ.model` | `string` | `"llama-3.3-70b-versatile"` | Model ID used for AI generation (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, etc.). |
+| `gitIQ.temperature` | `number` | `0.2` | Sampling temperature for AI generation (0.0 to 2.0). |
+| `gitIQ.timeout` | `number` | `30000` | Groq request timeout in milliseconds. |
+
+---
+
+## 🔒 Privacy & Telemetry Statement
+
+- **Zero Telemetry**: GitIQ contains **no tracking scripts, telemetry analytics, or user profiling**.
+- **Local Git Execution**: All Git history exploration, activity analysis, and diff operations execute locally via Git CLI.
+- **Secure API Communication**: Diff snippets sent for commit and PR generation are transmitted directly to the official Groq API endpoint via HTTPS using your private API key.
+
+---
+
+## ❓ Frequently Asked Questions (FAQ)
+
+<details>
+<summary><b>1. Is GitIQ free to use?</b></summary>
+Yes! GitIQ is 100% open-source under the MIT license. You only need a free API key from Groq Console to use AI features.
+</details>
+
+<details>
+<summary><b>2. Where is my API key stored?</b></summary>
+Your API key is saved using VS Code's native <code>SecretStorage</code> API, which encrypts data using your operating system's native keychain (Keychain on macOS, Credential Manager on Windows, libsecret on Linux).
+</details>
+
+<details>
+<summary><b>3. Does GitIQ support large repositories?</b></summary>
+Yes. GitIQ automatically truncates safe context limits (~70,000 characters) before sending prompts to ensure your requests stay within AI context windows.
+</details>
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Groq AI Conventional Commit Generator
+- [x] AI Commit Explanation & Diff Preview
+- [x] AI Pull Request Helper (Generate, Copy, Save, Open Compare Page)
+- [x] Offline Commit Analytics & History Explorer
+- [x] OS-Level SecretStorage Integration
+- [ ] Multi-Provider Support (OpenAI, Gemini, Ollama)
+- [ ] Source Control (SCM) Inline Button Integration
+- [ ] Custom User Prompt Templates
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI/issues).
+
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request!
+
+---
+
+## 📜 License
+
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
+
+---
+
+## 📞 Support & Contact
+
+- **GitHub Issues**: [Report a Bug or Request Feature](https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI/issues)
+- **Repository**: [ThakurDivyanshsingh-77/CommitPilot-AI](https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI)

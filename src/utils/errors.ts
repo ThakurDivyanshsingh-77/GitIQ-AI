@@ -1,48 +1,50 @@
-/** Base error type for extension-domain failures with a consistent prototype chain. */
-class CommitPilotError extends Error {
+/** Base error class for all GitIQ domain exceptions. */
+export class GitIQError extends Error {
 	public constructor(message: string) {
 		super(message);
-		this.name = new.target.name;
-		Object.setPrototypeOf(this, new.target.prototype);
+		this.name = this.constructor.name;
+		Error.captureStackTrace?.(this, this.constructor);
 	}
 }
 
-/** Represents a failure while inspecting or reading a local Git repository. */
-export class GitError extends CommitPilotError {}
+/** Legacy alias for GitIQError. */
+export { GitIQError as CommitPilotError };
 
-/** Represents a failure while configuring or invoking an AI provider. */
-export class ProviderError extends CommitPilotError {}
+/** Base error for local Git process execution failures. */
+export class GitError extends GitIQError {}
 
-/** Represents invalid or incomplete CommitPilot AI configuration. */
-export class ConfigurationError extends CommitPilotError {}
-
-/** Indicates that a requested workspace folder is not a Git repository. */
+/** Raised when an operation is executed outside of a valid Git work tree. */
 export class NotGitRepositoryError extends GitError {}
 
-/** Indicates that a repository does not currently contain staged changes. */
+/** Raised when user requests commit generation with no staged changes. */
 export class NoStagedChangesError extends GitError {}
 
-/** Indicates that executing a git commit command failed. */
+/** Raised when `git commit` process execution fails. */
 export class GitCommitError extends GitError {}
 
-/** Indicates that a provider request exceeded the configured timeout. */
-export class ProviderTimeoutError extends ProviderError {}
+/** Base error for AI provider operations. */
+export class ProviderError extends GitIQError {}
 
-/** Indicates that the provider could not be reached over the network. */
-export class ProviderNetworkError extends ProviderError {}
+/** Raised when invalid or incomplete GitIQ configuration is supplied. */
+export class ConfigurationError extends GitIQError {}
 
-/** Indicates that the provider rejected the configured credentials. */
+/** Raised when API key authentication fails with the AI provider. */
 export class ProviderAuthenticationError extends ProviderError {}
 
-/** Indicates that the provider rejected a request because of rate limiting. */
+/** Raised when API rate limits are exceeded. */
 export class ProviderRateLimitError extends ProviderError {}
 
-/** Indicates that a provider response could not be safely interpreted. */
-export class ProviderResponseError extends ProviderError {}
-
-/** Indicates that the request payload (staged diff) exceeded the model's size limit. */
+/** Raised when staged diff exceeds the AI model context limit. */
 export class ProviderPayloadTooLargeError extends ProviderError {}
 
-/** Indicates that an AI response violates the commit-message policy. */
-export class InvalidCommitMessageError extends ProviderError {}
+/** Raised when network connection is unavailable. */
+export class ProviderNetworkError extends ProviderError {}
 
+/** Raised when request times out. */
+export class ProviderTimeoutError extends ProviderError {}
+
+/** Raised when provider returns empty or malformed output. */
+export class ProviderResponseError extends ProviderError {}
+
+/** Raised when AI generated commit message fails validation rules. */
+export class InvalidCommitMessageError extends GitIQError {}

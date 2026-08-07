@@ -74,7 +74,11 @@ export function registerExplainCommitCommand(
 					() => commitMessageService.explainCommit(workspacePath, selected.commit.hash)
 				);
 
-				await commitExplainProvider.showExplanation(selected.commit.hash, explanation);
+				await commitExplainProvider.showExplanation(
+					selected.commit.hash,
+					selected.commit.subject,
+					explanation
+				);
 			} catch (error: unknown) {
 				const message = error instanceof Error ? error.message : String(error);
 				logger?.error(`Failed to explain commit: ${message}`, error);

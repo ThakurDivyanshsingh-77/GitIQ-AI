@@ -37,14 +37,16 @@ export function registerGenerateCommitMessageCommand(
 			}
 
 			try {
-				logger?.info('Executing CommitPilot AI: Generate Commit Message command...');
+				logger?.info('Executing GitIQ: Generate Commit Message command...');
+				const workspacePath = workspaceFolder.uri.fsPath;
+
 				const result = await vscode.window.withProgress(
 					{
 						location: vscode.ProgressLocation.Notification,
-						title: 'Analyzing staged changes...',
+						title: '$(loading~spin) Analyzing staged changes and generating commit message...',
 						cancellable: false
 					},
-					() => commitMessageService.generateCommitMessage(workspaceFolder.uri.fsPath)
+					() => commitMessageService.generateCommitMessage(workspacePath)
 				);
 
 				if (result.isTruncated) {
@@ -54,8 +56,8 @@ export function registerGenerateCommitMessageCommand(
 				}
 
 				const userInput = await vscode.window.showInputBox({
-					title: 'CommitPilot AI',
-					prompt: 'Review or edit the generated commit message',
+					title: 'GitIQ',
+					prompt: 'Review and edit the AI-generated conventional commit message',
 					value: result.message.subject,
 					ignoreFocusOut: true
 				});

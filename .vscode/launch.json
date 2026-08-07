@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run CommitPilot AI",
+      "name": "Run GitIQ",
       "type": "extensionHost",
       "request": "launch",
       "args": [

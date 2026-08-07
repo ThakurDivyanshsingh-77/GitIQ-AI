@@ -1,10 +1,13 @@
 import { Provider } from '../types/provider';
 
 /** Stable identity used when accessing the extension's VS Code configuration. */
-export const EXTENSION_ID = 'commitpilot-ai';
+export const EXTENSION_ID = 'gitiq';
 
 /** Configuration section that settings are read from. */
-export const CONFIGURATION_SECTION = 'commitPilotAI';
+export const CONFIGURATION_SECTION = 'gitIQ';
+
+/** Legacy configuration section for backward compatibility. */
+export const LEGACY_CONFIGURATION_SECTION = 'commitPilotAI';
 
 /** Keys reserved for provider configuration. */
 export const CONFIGURATION_KEYS = {
@@ -55,6 +58,40 @@ export const CONVENTIONAL_COMMIT_TYPES = [
 
 /** Central command identifiers shared by the extension manifest and commands. */
 export const COMMAND_IDS = {
+	hello: 'gitIQ.hello',
+	checkGitRepository: 'gitIQ.checkGitRepository',
+	previewGitDiff: 'gitIQ.previewGitDiff',
+	generateCommitMessage: 'gitIQ.generateCommitMessage',
+	viewCommitHistory: 'gitIQ.viewCommitHistory',
+	explainCommit: 'gitIQ.explainCommit',
+	copyCommitHash: 'gitIQ.copyCommitHash',
+	push: 'gitIQ.push',
+	pull: 'gitIQ.pull',
+	fetch: 'gitIQ.fetch',
+	repositoryInfo: 'gitIQ.repositoryInfo',
+	currentBranch: 'gitIQ.currentBranch',
+	openRepository: 'gitIQ.openRepository',
+	openBranch: 'gitIQ.openBranch',
+	generatePullRequest: 'gitIQ.generatePullRequest',
+	copyPRTitle: 'gitIQ.copyPRTitle',
+	copyPRDescription: 'gitIQ.copyPRDescription',
+	copyEntirePR: 'gitIQ.copyEntirePR',
+	copyEntirePullRequest: 'gitIQ.copyEntirePullRequest',
+	savePullRequest: 'gitIQ.savePullRequest',
+	openPullRequestPage: 'gitIQ.openPullRequestPage',
+	searchCommitHistory: 'gitIQ.searchCommitHistory',
+	commitStatistics: 'gitIQ.commitStatistics',
+	topContributors: 'gitIQ.topContributors',
+	commitActivity: 'gitIQ.commitActivity',
+	exportHistoryReport: 'gitIQ.exportHistoryReport',
+	setApiKey: 'gitIQ.setApiKey',
+	updateApiKey: 'gitIQ.updateApiKey',
+	removeApiKey: 'gitIQ.removeApiKey',
+	selectModel: 'gitIQ.selectModel'
+} as const;
+
+/** Legacy command IDs for backwards compatibility. */
+export const LEGACY_COMMAND_IDS: Record<keyof typeof COMMAND_IDS, string> = {
 	hello: 'commitPilotAI.hello',
 	checkGitRepository: 'commitPilotAI.checkGitRepository',
 	previewGitDiff: 'commitPilotAI.previewGitDiff',
@@ -85,7 +122,7 @@ export const COMMAND_IDS = {
 	updateApiKey: 'commitPilotAI.updateApiKey',
 	removeApiKey: 'commitPilotAI.removeApiKey',
 	selectModel: 'commitPilotAI.selectModel'
-} as const;
+};
 
 /** Human-readable names used when presenting provider choices in UI. */
 export const PROVIDER_NAMES: Readonly<Record<Provider, string>> = {

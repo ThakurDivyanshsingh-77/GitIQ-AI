@@ -7,7 +7,7 @@ import { COMMAND_IDS } from '../utils/constants';
  */
 export function registerHelloCommand(context: vscode.ExtensionContext): void {
 	const helloCommand = vscode.commands.registerCommand(COMMAND_IDS.hello, () => {
-		void vscode.window.showInformationMessage('CommitPilot AI is running successfully 🚀');
+		void vscode.window.showInformationMessage('GitIQ is running successfully 🚀');
 	});
 
 	context.subscriptions.push(helloCommand);

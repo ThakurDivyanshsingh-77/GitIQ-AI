@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-**CommitPilot AI** (`commitpilot-ai`) is an AI-powered Visual Studio Code extension designed to streamline Git workflows. It inspects staged Git changes and generates structured, Conventional Commit suggestions powered by AI (Groq API), explores commit history, explains diffs with AI, and provides full Git + GitHub workflow integration.
+**GitIQ** (`gitiq`) is an AI-powered Visual Studio Code extension designed to streamline Git workflows. It inspects staged Git changes and generates structured, Conventional Commit suggestions powered by AI (Groq API), explores commit history, explains diffs with AI, generates complete pull requests, provides offline commit history analytics, and integrates with GitHub.
 
 ### Core Features & Philosophy
 - **AI-Powered Commits**: Analyzes staged diffs and generates Conventional Commit messages. Suggestions are presented in an editable input box for developer review, then committed on Enter.
@@ -68,7 +68,7 @@ src/
 │   └── historyModels.ts              # Interfaces for SearchResultCommit, ContributorStat, DailyActivityStat, CommitStatistics
 ├── providers/                        # AI & Virtual Document Providers
 │   ├── AIProvider.ts                 # Abstract contract interface for AI services
-│   ├── AIProviderFactory.ts          # Provider resolution strategy factory
+│   ├── AIProviderFactory.ts          # Provider resolution strategy factory (GitIQAIProviderFactory)
 │   ├── commitDetailsProvider.ts      # Read-only commit detail documents
 │   ├── commitExplainProvider.ts      # Read-only AI explanation documents
 │   ├── GroqProvider.ts               # Groq SDK AI completion client
@@ -82,7 +82,7 @@ src/
 │   ├── configService.ts              # Typed VS Code configuration manager
 │   ├── gitService.ts                 # Isolated git binary process execution
 │   ├── historyService.ts             # Offline Git CLI commit analytics & report exporter
-│   ├── loggerService.ts              # Output channel logging service
+│   ├── loggerService.ts              # Output channel logging service ("GitIQ")
 │   ├── promptBuilder.ts              # Deterministic AI prompt builder
 │   ├── pullRequestService.ts        # AI pull request orchestration service
 │   └── SettingsService.ts           # SecretStorage API key & model settings manager
@@ -90,8 +90,8 @@ src/
 │   ├── commit.ts                     # Commit contracts & validation schemas
 │   └── provider.ts                   # Provider identifiers & config contracts
 └── utils/                            # Utilities & Error domain types
-    ├── constants.ts                  # Shared command IDs & configuration keys
-    └── errors.ts                     # Custom error hierarchy
+    ├── constants.ts                  # Shared command IDs & configuration keys (gitIQ.*)
+    └── errors.ts                     # Custom error hierarchy (GitIQError)
 ```
 
 ---
@@ -99,64 +99,17 @@ src/
 ## 3. File Structure
 
 ```text
-commitpilot-ai/
+gitiq/
 ├── .vscode/
 │   ├── launch.json                   # Launch configuration for F5 Debug Host
 │   └── tasks.json                    # VS Code build task configuration
 ├── src/
 │   ├── commands/
-│   │   ├── checkGitRepositoryCommand.ts
-│   │   ├── commitActivityCommand.ts
-│   │   ├── commitStatisticsCommand.ts
-│   │   ├── copyCommitHashCommand.ts
-│   │   ├── copyEntirePRCommand.ts
-│   │   ├── copyPRDescriptionCommand.ts
-│   │   ├── copyPRTitleCommand.ts
-│   │   ├── currentBranchCommand.ts
-│   │   ├── explainCommitCommand.ts
-│   │   ├── exportHistoryReportCommand.ts
-│   │   ├── fetchCommand.ts
-│   │   ├── generateCommitMessageCommand.ts
-│   │   ├── generatePullRequestCommand.ts
-│   │   ├── helloCommand.ts
-│   │   ├── openBranchCommand.ts
-│   │   ├── openPullRequestPageCommand.ts
-│   │   ├── openRepositoryCommand.ts
-│   │   ├── previewGitDiffCommand.ts
-│   │   ├── pullCommand.ts
-│   │   ├── pushCommand.ts
-│   │   ├── repositoryInfoCommand.ts
-│   │   ├── savePullRequestCommand.ts
-│   │   ├── searchCommitHistoryCommand.ts
-│   │   ├── topContributorsCommand.ts
-│   │   └── viewCommitHistoryCommand.ts
 │   ├── models/
-│   │   └── historyModels.ts
 │   ├── providers/
-│   │   ├── AIProvider.ts
-│   │   ├── AIProviderFactory.ts
-│   │   ├── commitDetailsProvider.ts
-│   │   ├── commitExplainProvider.ts
-│   │   ├── GroqProvider.ts
-│   │   ├── gitDiffPreviewProvider.ts
-│   │   ├── historyPreviewProvider.ts
-│   │   ├── pullRequestProvider.ts
-│   │   └── repoInfoProvider.ts
 │   ├── services/
-│   │   ├── commitMessageService.ts
-│   │   ├── commitMessageValidator.ts
-│   │   ├── configService.ts
-│   │   ├── gitService.ts
-│   │   ├── historyService.ts
-│   │   ├── loggerService.ts
-│   │   ├── promptBuilder.ts
-│   │   └── pullRequestService.ts
 │   ├── types/
-│   │   ├── commit.ts
-│   │   └── provider.ts
 │   ├── utils/
-│   │   ├── constants.ts
-│   │   └── errors.ts
 │   └── extension.ts                  # Extension entry point
 ├── .agents/
 │   └── AGENTS.md                     # Mandatory PROJECT_CONTEXT.md update rule
@@ -164,6 +117,7 @@ commitpilot-ai/
 ├── .vscodeignore                     # Excludes source files from extension package
 ├── CHANGELOG.md                      # Release notes & version history
 ├── eslint.config.mjs                 # Flat ESLint configuration
+├── icon.png                          # Official GitIQ Extension Icon
 ├── LICENSE                           # MIT License
 ├── package.json                      # Manifest, configuration, & command contribution
 ├── PROJECT_CONTEXT.md                # AI Handoff & Memory Bank (This File)
@@ -177,15 +131,15 @@ commitpilot-ai/
 
 *(Not applicable - Stateless Extension)*
 
-State management relies on VS Code Workspace Configuration settings (`commitPilotAI.*`):
+State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) and SecretStorage (`gitiq.groqApiKey`):
 
 | Setting Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `commitPilotAI.apiKey` | `string` | `""` | Secret key for Groq API authentication. |
-| `commitPilotAI.provider` | `enum` | `"groq"` | Active AI provider (`groq`, `openai`, `gemini`, `ollama`). |
-| `commitPilotAI.model` | `string` | `"llama-3.3-70b-versatile"` | Model ID for Groq provider completion requests. |
-| `commitPilotAI.temperature` | `number` | `0.2` | Sampling temperature for AI generation (0.0 to 2.0). |
-| `commitPilotAI.timeout` | `number` | `30000` | Groq request timeout in milliseconds. |
+| `gitIQ.apiKey` | `string` | `""` | Legacy key / SecretStorage fallback for Groq API authentication. |
+| `gitIQ.provider` | `enum` | `"groq"` | Active AI provider (`groq`, `openai`, `gemini`, `ollama`). |
+| `gitIQ.model` | `string` | `"llama-3.3-70b-versatile"` | Model ID for Groq provider completion requests. |
+| `gitIQ.temperature` | `number` | `0.2` | Sampling temperature for AI generation (0.0 to 2.0). |
+| `gitIQ.timeout` | `number` | `30000` | Groq request timeout in milliseconds. |
 
 ---
 
@@ -195,55 +149,56 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 
 | Command ID | Title | Purpose / Handler |
 | :--- | :--- | :--- |
-| `commitPilotAI.hello` | `CommitPilot AI: Hello` | Smoke test / basic extension activation test. |
-| `commitPilotAI.checkGitRepository` | `CommitPilot AI: Check Git Repository` | Verifies whether the workspace is inside a Git repository. |
-| `commitPilotAI.previewGitDiff` | `CommitPilot AI: Preview Git Diff` | Opens read-only virtual diff document for staged changes (`git diff --cached`). |
-| `commitPilotAI.generateCommitMessage` | `CommitPilot AI: Generate Commit Message` | Fetches staged diff, queries Groq AI, validates format, shows editable QuickInput box, and executes `git commit`. |
-| `commitPilotAI.viewCommitHistory` | `CommitPilot AI: View Commit History` | Displays recent commits (`git log -n 20`) in QuickPick with instant search and shows commit details (`git show <hash> --stat`). |
-| `commitPilotAI.explainCommit` | `CommitPilot AI: Explain Commit` | Prompts user to select a commit and generates a plain English AI explanation of its purpose, changes, and impact. |
-| `commitPilotAI.copyCommitHash` | `CommitPilot AI: Copy Commit Hash` | QuickPick commit selection that copies the full commit hash to the system clipboard. |
-| `commitPilotAI.push` | `CommitPilot AI: Push Branch` | Pushes current branch to remote origin (`git push origin <branch>`) with progress notification. |
-| `commitPilotAI.pull` | `CommitPilot AI: Pull Branch` | Pulls latest changes from remote origin (`git pull origin <branch>`) with merge conflict detection. |
-| `commitPilotAI.fetch` | `CommitPilot AI: Fetch Updates` | Fetches remote references (`git fetch`) with status notification. |
-| `commitPilotAI.currentBranch` | `CommitPilot AI: Show Current Branch` | Displays the active branch name (`git branch --show-current`). |
-| `commitPilotAI.repositoryInfo` | `CommitPilot AI: Repository Information` | Shows repo name, branch, remote URL, latest commit, total commits, and git status in a read-only Markdown document. |
-| `commitPilotAI.openRepository` | `CommitPilot AI: Open GitHub Repository` | Detects origin URL (SSH/HTTPS), converts to browser URL, and opens in default browser. |
-| `commitPilotAI.openBranch` | `CommitPilot AI: Open Current Branch on GitHub` | Opens `https://github.com/user/repo/tree/current-branch` in default browser. |
-| `commitPilotAI.generatePullRequest` | `CommitPilot AI: Generate Pull Request` | Generates complete AI-powered PR document from branch diff and commit history. |
-| `commitPilotAI.copyPRTitle` | `CommitPilot AI: Copy PR Title` | Copies the generated PR title to clipboard. |
-| `commitPilotAI.copyPRDescription` | `CommitPilot AI: Copy PR Description` | Copies the generated PR description to clipboard. |
-| `commitPilotAI.copyEntirePR` | `CommitPilot AI: Copy Entire Pull Request` | Copies the full generated PR Markdown to clipboard. |
-| `commitPilotAI.savePullRequest` | `CommitPilot AI: Save Pull Request` | Saves generated PR as `pull-request.md` in project root. |
-| `commitPilotAI.openPullRequestPage` | `CommitPilot AI: Open Pull Request Page` | Opens GitHub compare URL (`/compare/main...currentBranch`) for PR creation. |
-| `commitPilotAI.searchCommitHistory` | `CommitPilot AI: Search Commit History` | Offline keyword search across commit log (`git log --all --grep`). |
-| `commitPilotAI.commitStatistics` | `CommitPilot AI: Commit Statistics` | Aggregates repository commit metrics, counts, and age statistics. |
-| `commitPilotAI.topContributors` | `CommitPilot AI: Top Contributors` | Displays ranked contributor commit counts using `git shortlog -sn`. |
-| `commitPilotAI.commitActivity` | `CommitPilot AI: Commit Activity` | Displays 7-day commit activity breakdown as a Markdown table. |
-| `commitPilotAI.exportHistoryReport` | `CommitPilot AI: Export History Report` | Exports complete Markdown analytics report to `commit-history-report.md`. |
-| `commitPilotAI.setApiKey` | `CommitPilot AI: Set Groq API Key` | Prompts for Groq API key (starts with `gsk_`) and stores securely in VS Code `SecretStorage`. |
-| `commitPilotAI.updateApiKey` | `CommitPilot AI: Update Groq API Key` | Reuses secure prompt flow to update stored API key. |
-| `commitPilotAI.removeApiKey` | `CommitPilot AI: Remove Groq API Key` | Deletes stored API key from `SecretStorage` after confirmation. |
-| `commitPilotAI.selectModel` | `CommitPilot AI: Select Groq Model` | Displays QuickPick selector for supported Groq models and updates VS Code settings. |
+| `gitIQ.hello` | `GitIQ: Hello` | Smoke test / basic extension activation test. |
+| `gitIQ.checkGitRepository` | `GitIQ: Check Git Repository` | Verifies whether the workspace is inside a Git repository. |
+| `gitIQ.previewGitDiff` | `GitIQ: Preview Git Diff` | Opens read-only virtual diff document for staged changes. |
+| `gitIQ.generateCommitMessage` | `GitIQ: Generate Commit Message` | Fetches staged diff, queries Groq AI, validates format, shows editable QuickInput box, and executes `git commit`. |
+| `gitIQ.viewCommitHistory` | `GitIQ: View Commit History` | Displays recent commits (`git log -n 20`) in QuickPick with search and details. |
+| `gitIQ.explainCommit` | `GitIQ: Explain Commit` | Prompts user to select a commit and generates a plain English AI explanation of its purpose, changes, and impact. |
+| `gitIQ.copyCommitHash` | `GitIQ: Copy Commit Hash` | QuickPick commit selection that copies the full commit hash to the system clipboard. |
+| `gitIQ.push` | `GitIQ: Push Branch` | Pushes current branch to remote origin with progress notification. |
+| `gitIQ.pull` | `GitIQ: Pull Branch` | Pulls latest changes from remote origin with merge conflict detection. |
+| `gitIQ.fetch` | `GitIQ: Fetch Updates` | Fetches remote references (`git fetch`) with status notification. |
+| `gitIQ.currentBranch` | `GitIQ: Show Current Branch` | Displays the active branch name (`git branch --show-current`). |
+| `gitIQ.repositoryInfo` | `GitIQ: Repository Information` | Shows repo name, branch, remote URL, latest commit, total commits, and git status. |
+| `gitIQ.openRepository` | `GitIQ: Open GitHub Repository` | Detects origin URL and opens in default browser. |
+| `gitIQ.openBranch` | `GitIQ: Open Current Branch on GitHub` | Opens branch view on GitHub in default browser. |
+| `gitIQ.generatePullRequest` | `GitIQ: Generate Pull Request` | Generates complete AI-powered PR document from branch diff and commit history. |
+| `gitIQ.copyPRTitle` | `GitIQ: Copy PR Title` | Copies generated PR title to clipboard. |
+| `gitIQ.copyPRDescription` | `GitIQ: Copy PR Description` | Copies generated PR description to clipboard. |
+| `gitIQ.copyEntirePR` | `GitIQ: Copy Entire Pull Request` | Copies full generated PR Markdown to clipboard. |
+| `gitIQ.savePullRequest` | `GitIQ: Save Pull Request` | Saves generated PR as `pull-request.md` in project root. |
+| `gitIQ.openPullRequestPage` | `GitIQ: Open Pull Request Page` | Opens GitHub compare URL (`/compare/main...currentBranch`) for PR creation. |
+| `gitIQ.searchCommitHistory` | `GitIQ: Search Commit History` | Offline keyword search across commit log (`git log --all --grep`). |
+| `gitIQ.commitStatistics` | `GitIQ: Commit Statistics` | Aggregates repository commit metrics and age statistics. |
+| `gitIQ.topContributors` | `GitIQ: Top Contributors` | Displays ranked contributor commit counts using `git shortlog -sn`. |
+| `gitIQ.commitActivity` | `GitIQ: Commit Activity` | Displays 7-day commit activity breakdown as a Markdown table. |
+| `gitIQ.exportHistoryReport` | `GitIQ: Export History Report` | Exports complete Markdown analytics report to `commit-history-report.md`. |
+| `gitIQ.setApiKey` | `GitIQ: Set Groq API Key` | Prompts for Groq API key and stores securely in VS Code `SecretStorage`. |
+| `gitIQ.updateApiKey` | `GitIQ: Update Groq API Key` | Reuses secure prompt flow to update stored API key. |
+| `gitIQ.removeApiKey` | `GitIQ: Remove Groq API Key` | Deletes stored API key from `SecretStorage` after confirmation. |
+| `gitIQ.selectModel` | `GitIQ: Select Groq Model` | Displays QuickPick selector for supported Groq models and updates VS Code settings. |
 
 ### Virtual Scheme Registration
-- **`commitpilot-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
-- **`commitpilot-commit-details:`**: `CommitDetailsProvider` (Read-only commit detail and stats document).
-- **`commitpilot-commit-explain:`**: `CommitExplainProvider` (Read-only Markdown document for AI commit explanations).
-- **`commitpilot-repo-info:`**: `RepoInfoProvider` (Read-only Markdown document for repository information summary).
-- **`commitpilot-pull-request:`**: `PullRequestProvider` (Read-only Markdown document for AI-generated pull requests).
-- **`commitpilot-history:`**: `HistoryPreviewProvider` (Read-only Markdown documents for commit history analytics previews).
+- **`gitiq-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
+- **`gitiq-commit-details:`**: `CommitDetailsProvider` (Read-only commit detail and stats document).
+- **`gitiq-commit-explain:`**: `CommitExplainProvider` (Read-only Markdown document for AI commit explanations).
+- **`gitiq-repo-info:`**: `RepoInfoProvider` (Read-only Markdown document for repository information summary).
+- **`gitiq-pull-request:`**: `PullRequestProvider` (Read-only Markdown document for AI-generated pull requests).
+- **`gitiq-history:`**: `HistoryPreviewProvider` (Read-only Markdown documents for commit history analytics previews).
 
 ---
 
 ## 6. Current Status & Changelog
 
-### Current Status: Phase 13 Settings & Configuration Completed (`v0.1.0`)
+### Current Status: Marketplace Ready Rebranding to GitIQ (`v1.0.0`)
 - [x] Complete TypeScript structure & strict compiler setup.
 - [x] Extension activation lifecycle & command registration in `extension.ts`.
-- [x] Dedicated Output Channel logging via `LoggerService` ("CommitPilot AI").
+- [x] Dedicated Output Channel logging via `LoggerService` ("GitIQ").
 - [x] Startup configuration validation (`validateConfiguration`) in `SettingsService`.
-- [x] Secret Storage API key management (`setApiKey`, `updateApiKey`, `removeApiKey`) using `vscode.SecretStorage`.
-- [x] Automatic one-click migration of legacy API keys from `settings.json` to `SecretStorage`.
+- [x] Marketplace README shields badges (Version, VS Code 1.95+, MIT License, TypeScript 5.x).
+- [x] Secret Storage API key management (`setApiKey`, `updateApiKey`, `removeApiKey`) using `vscode.SecretStorage` (`gitiq.groqApiKey`).
+- [x] Automatic one-click migration of legacy API keys from `settings.json` or legacy secret storage (`commitpilot.groqApiKey`).
 - [x] Groq Model Selector (`selectModelCommand`) with QuickPick for supported models.
 - [x] Git commit history retrieval (`getCommitHistory`) and commit detail inspection (`getCommitDetails`).
 - [x] Interactive commit history QuickPick search (`viewCommitHistoryCommand`).
@@ -259,7 +214,7 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 - [x] Current branch display (`getCurrentBranch`) including detached HEAD detection.
 - [x] Repository information summary document (`getRepositoryInfo` & `RepoInfoProvider`).
 - [x] GitHub browser navigation: Open Repository and Open Current Branch.
-- [x] AI Pull Request generation with structured prompt, title/description parsing, and validation.
+- [x] AI Pull Request generation with structured prompt, conventional commit prefix enforcement, multi-paragraph description, 2048 token budget, and 1-attempt retry.
 - [x] Copy PR Title, Copy PR Description, Copy Entire PR clipboard commands.
 - [x] Save Pull Request as `pull-request.md` to project root.
 - [x] Open GitHub compare page for PR creation.
@@ -279,8 +234,8 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 - [ ] **Custom Prompt Templates**: Allow users to define custom instructions or commit style rules in settings.
 - [ ] **Source Control UI Integration**: Add an inline button to the VS Code Source Control (SCM) panel to generate commit messages directly into the SCM input box.
 - [ ] **Unit / Integration Tests**: Add automated unit test suite (`vscode-test` / `mocha`).
-- [x] **GitHub PR Integration**: AI Pull Request generation with copy, save, and compare page features (Phase 10).
-- [x] **Commit History Analytics**: Offline commit search, repo statistics, top contributors, 7-day activity, and report export (Phase 12).
+- [x] **GitHub PR Integration**: AI Pull Request generation with copy, save, and compare page features.
+- [x] **Commit History Analytics**: Offline commit search, repo statistics, top contributors, 7-day activity, and report export.
 
 ### Known Issues
 - *None currently identified.*
@@ -308,5 +263,5 @@ npm run check
 1. Open this folder in Visual Studio Code.
 2. Press `F5` to open the **Extension Development Host**.
 3. In the new window, open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-4. Set `commitPilotAI.apiKey` in Settings if testing AI generation.
-5. Run any of the contributed `CommitPilot AI: ...` commands.
+4. Set Groq API key via `GitIQ: Set Groq API Key`.
+5. Run any of the contributed `GitIQ: ...` commands.

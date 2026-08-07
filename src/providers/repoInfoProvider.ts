@@ -2,14 +2,14 @@ import * as vscode from 'vscode';
 import type { RepositoryInfo } from '../services/gitService';
 
 /**
- * Provides in-memory, read-only Markdown documents for Repository Information.
+ * Provides in-memory, read-only Markdown documents for Repository Information summary.
  */
 export class RepoInfoProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
-	public static readonly scheme = 'commitpilot-repo-info';
+	public static readonly scheme = 'gitiq-repo-info';
 
 	private readonly uri = vscode.Uri.from({
 		scheme: RepoInfoProvider.scheme,
-		path: '/CommitPilot AI - Repository Information.md'
+		path: '/GitIQ - Repository Information.md'
 	});
 
 	private readonly changeEmitter = new vscode.EventEmitter<vscode.Uri>();
@@ -27,21 +27,22 @@ export class RepoInfoProvider implements vscode.TextDocumentContentProvider, vsc
 	}
 
 	/**
-	 * Creates and displays a read-only Markdown document containing repository details.
+	 * Formats and displays repository information in a read-only Markdown document.
 	 */
 	public async showRepositoryInfo(info: RepositoryInfo): Promise<void> {
 		this.content = [
-			`# 📊 CommitPilot AI - Repository Information`,
-			``,
-			`- **Repository Name:** \`${info.repoName}\``,
-			`- **Current Branch:** \`${info.currentBranch}\``,
-			`- **Remote Origin URL:** \`${info.remoteUrl}\``,
-			`- **Latest Commit:** \`${info.latestCommit}\``,
-			`- **Total Commits:** \`${info.totalCommits}\``,
+			`# 📁 Repository Information: ${info.repoName}`,
 			``,
 			`---`,
 			``,
-			`### Working Tree Status (\`git status --short\`)`,
+			`- **Current Branch:** \`${info.currentBranch}\``,
+			`- **Remote Origin:** ${info.remoteUrl}`,
+			`- **Total Commits:** ${info.totalCommits}`,
+			`- **Latest Commit:** ${info.latestCommit}`,
+			``,
+			`---`,
+			``,
+			`## 🛠 Working Tree Status`,
 			``,
 			`\`\`\`text`,
 			info.gitStatus,

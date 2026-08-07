@@ -28,7 +28,7 @@ import { registerSetApiKeyCommand } from './commands/setApiKeyCommand';
 import { registerTopContributorsCommand } from './commands/topContributorsCommand';
 import { registerUpdateApiKeyCommand } from './commands/updateApiKeyCommand';
 import { registerViewCommitHistoryCommand } from './commands/viewCommitHistoryCommand';
-import { CommitPilotAIProviderFactory } from './providers/AIProviderFactory';
+import { GitIQAIProviderFactory } from './providers/AIProviderFactory';
 import { CommitDetailsProvider } from './providers/commitDetailsProvider';
 import { CommitExplainProvider } from './providers/commitExplainProvider';
 import { GitDiffPreviewProvider } from './providers/gitDiffPreviewProvider';
@@ -47,14 +47,14 @@ import { SettingsService } from './services/SettingsService';
 let loggerService: LoggerService | undefined;
 
 /**
- * Activates CommitPilot AI when VS Code invokes one of its activation events.
+ * Activates GitIQ when VS Code invokes one of its activation events.
  * Handles service composition, configuration validation, and output logging.
  */
 export function activate(context: vscode.ExtensionContext): void {
 	loggerService = new LoggerService();
 	context.subscriptions.push(loggerService);
 
-	loggerService.info('Activating CommitPilot AI extension...');
+	loggerService.info('Activating GitIQ extension...');
 
 	const settingsService = new SettingsService(context.secrets, loggerService);
 
@@ -70,7 +70,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const repoInfoProvider = new RepoInfoProvider();
 	const pullRequestProvider = new PullRequestProvider();
 	const historyPreviewProvider = new HistoryPreviewProvider();
-	const providerFactory = new CommitPilotAIProviderFactory(loggerService);
+	const providerFactory = new GitIQAIProviderFactory(loggerService);
 	const commitMessageValidator = new CommitMessageValidator();
 	const promptBuilder = new PromptBuilder();
 
@@ -98,18 +98,18 @@ export function activate(context: vscode.ExtensionContext): void {
 	pullRequestProvider.register(context);
 	historyPreviewProvider.register(context);
 
-	// Phase 1–7 commands
+	// Core Git & AI commands
 	registerHelloCommand(context);
 	registerCheckGitRepositoryCommand(context, gitService);
 	registerPreviewGitDiffCommand(context, gitService, gitDiffPreviewProvider);
 	registerGenerateCommitMessageCommand(context, commitMessageService, loggerService);
 
-	// Phase 8 commands
+	// History & Explanation commands
 	registerViewCommitHistoryCommand(context, gitService, commitDetailsProvider, loggerService);
 	registerExplainCommitCommand(context, gitService, commitMessageService, commitExplainProvider, loggerService);
 	registerCopyCommitHashCommand(context, gitService, loggerService);
 
-	// Phase 9 commands
+	// GitHub Integration commands
 	registerPushCommand(context, gitService, loggerService);
 	registerPullCommand(context, gitService, loggerService);
 	registerFetchCommand(context, gitService, loggerService);
@@ -118,7 +118,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	registerOpenRepositoryCommand(context, gitService, loggerService);
 	registerOpenBranchCommand(context, gitService, loggerService);
 
-	// Phase 10 commands
+	// Pull Request Helper commands
 	registerGeneratePullRequestCommand(context, pullRequestService, pullRequestProvider, loggerService);
 	registerCopyPRTitleCommand(context, loggerService);
 	registerCopyPRDescriptionCommand(context, loggerService);
@@ -126,20 +126,20 @@ export function activate(context: vscode.ExtensionContext): void {
 	registerSavePullRequestCommand(context, loggerService);
 	registerOpenPullRequestPageCommand(context, gitService, loggerService);
 
-	// Phase 12 commands (AI Commit History Analytics - Offline Git CLI)
+	// Commit History Analytics commands
 	registerSearchCommitHistoryCommand(context, historyService, historyPreviewProvider, loggerService);
 	registerCommitStatisticsCommand(context, historyService, historyPreviewProvider, loggerService);
 	registerTopContributorsCommand(context, historyService, historyPreviewProvider, loggerService);
 	registerCommitActivityCommand(context, historyService, historyPreviewProvider, loggerService);
 	registerExportHistoryReportCommand(context, historyService, loggerService);
 
-	// Phase 13 commands (Settings & Configuration - SecretStorage & Groq Model Selector)
+	// Settings & Configuration commands
 	registerSetApiKeyCommand(context, settingsService, loggerService);
 	registerUpdateApiKeyCommand(context, settingsService, loggerService);
 	registerRemoveApiKeyCommand(context, settingsService, loggerService);
 	registerSelectModelCommand(context, settingsService, loggerService);
 
-	loggerService.info('CommitPilot AI extension activated successfully 🚀');
+	loggerService.info('GitIQ extension activated successfully 🚀');
 }
 
 /**
@@ -147,7 +147,7 @@ export function activate(context: vscode.ExtensionContext): void {
  */
 export function deactivate(): void {
 	if (loggerService) {
-		loggerService.info('Deactivating CommitPilot AI extension...');
+		loggerService.info('Deactivating GitIQ extension...');
 		loggerService.dispose();
 		loggerService = undefined;
 	}

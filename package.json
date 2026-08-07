@@ -1,17 +1,75 @@
 {
-  "name": "commitpilot-ai",
-  "displayName": "CommitPilot AI",
-  "description": "An AI-powered Git commit assistant, history explorer, and GitHub integration for Visual Studio Code.",
-  "version": "0.1.0",
-  "publisher": "commitpilot",
+  "name": "gitiq",
+  "displayName": "GitIQ",
+  "description": "AI-Powered Git Assistant for Visual Studio Code",
+  "version": "1.0.0",
+  "publisher": "gitiq",
+  "icon": "icon.png",
   "license": "MIT",
   "engines": {
     "vscode": "^1.95.0"
   },
   "categories": [
+    "SCM Providers",
     "Other"
   ],
+  "keywords": [
+    "git",
+    "github",
+    "commit",
+    "commit message",
+    "pull request",
+    "git assistant",
+    "ai",
+    "groq",
+    "developer",
+    "vscode",
+    "productivity",
+    "git history",
+    "repository",
+    "branch",
+    "merge",
+    "code review"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI.git"
+  },
+  "homepage": "https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI#readme",
+  "bugs": {
+    "url": "https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI/issues"
+  },
   "activationEvents": [
+    "onCommand:gitIQ.hello",
+    "onCommand:gitIQ.checkGitRepository",
+    "onCommand:gitIQ.previewGitDiff",
+    "onCommand:gitIQ.generateCommitMessage",
+    "onCommand:gitIQ.viewCommitHistory",
+    "onCommand:gitIQ.explainCommit",
+    "onCommand:gitIQ.copyCommitHash",
+    "onCommand:gitIQ.push",
+    "onCommand:gitIQ.pull",
+    "onCommand:gitIQ.fetch",
+    "onCommand:gitIQ.repositoryInfo",
+    "onCommand:gitIQ.currentBranch",
+    "onCommand:gitIQ.openRepository",
+    "onCommand:gitIQ.openBranch",
+    "onCommand:gitIQ.generatePullRequest",
+    "onCommand:gitIQ.copyPRTitle",
+    "onCommand:gitIQ.copyPRDescription",
+    "onCommand:gitIQ.copyEntirePR",
+    "onCommand:gitIQ.copyEntirePullRequest",
+    "onCommand:gitIQ.savePullRequest",
+    "onCommand:gitIQ.openPullRequestPage",
+    "onCommand:gitIQ.searchCommitHistory",
+    "onCommand:gitIQ.commitStatistics",
+    "onCommand:gitIQ.topContributors",
+    "onCommand:gitIQ.commitActivity",
+    "onCommand:gitIQ.exportHistoryReport",
+    "onCommand:gitIQ.setApiKey",
+    "onCommand:gitIQ.updateApiKey",
+    "onCommand:gitIQ.removeApiKey",
+    "onCommand:gitIQ.selectModel",
     "onCommand:commitPilotAI.hello",
     "onCommand:commitPilotAI.checkGitRepository",
     "onCommand:commitPilotAI.previewGitDiff",
@@ -47,166 +105,166 @@
   "contributes": {
     "commands": [
       {
-        "command": "commitPilotAI.hello",
-        "title": "CommitPilot AI: Hello",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.hello",
+        "title": "GitIQ: Hello",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.checkGitRepository",
-        "title": "CommitPilot AI: Check Git Repository",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.checkGitRepository",
+        "title": "GitIQ: Check Git Repository",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.previewGitDiff",
-        "title": "CommitPilot AI: Preview Git Diff",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.previewGitDiff",
+        "title": "GitIQ: Preview Git Diff",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.generateCommitMessage",
-        "title": "CommitPilot AI: Generate Commit Message",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.generateCommitMessage",
+        "title": "GitIQ: Generate Commit Message",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.viewCommitHistory",
-        "title": "CommitPilot AI: View Commit History",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.viewCommitHistory",
+        "title": "GitIQ: View Commit History",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.explainCommit",
-        "title": "CommitPilot AI: Explain Commit",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.explainCommit",
+        "title": "GitIQ: Explain Commit",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.copyCommitHash",
-        "title": "CommitPilot AI: Copy Commit Hash",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.copyCommitHash",
+        "title": "GitIQ: Copy Commit Hash",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.push",
-        "title": "CommitPilot AI: Push Branch",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.push",
+        "title": "GitIQ: Push Branch",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.pull",
-        "title": "CommitPilot AI: Pull Branch",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.pull",
+        "title": "GitIQ: Pull Branch",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.fetch",
-        "title": "CommitPilot AI: Fetch Updates",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.fetch",
+        "title": "GitIQ: Fetch Updates",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.currentBranch",
-        "title": "CommitPilot AI: Show Current Branch",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.currentBranch",
+        "title": "GitIQ: Show Current Branch",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.repositoryInfo",
-        "title": "CommitPilot AI: Repository Information",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.repositoryInfo",
+        "title": "GitIQ: Repository Information",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.openRepository",
-        "title": "CommitPilot AI: Open GitHub Repository",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.openRepository",
+        "title": "GitIQ: Open GitHub Repository",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.openBranch",
-        "title": "CommitPilot AI: Open Current Branch on GitHub",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.openBranch",
+        "title": "GitIQ: Open Current Branch on GitHub",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.generatePullRequest",
-        "title": "CommitPilot AI: Generate Pull Request",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.generatePullRequest",
+        "title": "GitIQ: Generate Pull Request",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.copyPRTitle",
-        "title": "CommitPilot AI: Copy PR Title",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.copyPRTitle",
+        "title": "GitIQ: Copy PR Title",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.copyPRDescription",
-        "title": "CommitPilot AI: Copy PR Description",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.copyPRDescription",
+        "title": "GitIQ: Copy PR Description",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.copyEntirePR",
-        "title": "CommitPilot AI: Copy Entire Pull Request",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.copyEntirePR",
+        "title": "GitIQ: Copy Entire Pull Request",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.copyEntirePullRequest",
-        "title": "CommitPilot AI: Copy Entire Pull Request",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.copyEntirePullRequest",
+        "title": "GitIQ: Copy Entire Pull Request",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.savePullRequest",
-        "title": "CommitPilot AI: Save Pull Request",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.savePullRequest",
+        "title": "GitIQ: Save Pull Request",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.openPullRequestPage",
-        "title": "CommitPilot AI: Open Pull Request Page",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.openPullRequestPage",
+        "title": "GitIQ: Open Pull Request Page",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.searchCommitHistory",
-        "title": "CommitPilot AI: Search Commit History",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.searchCommitHistory",
+        "title": "GitIQ: Search Commit History",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.commitStatistics",
-        "title": "CommitPilot AI: Commit Statistics",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.commitStatistics",
+        "title": "GitIQ: Commit Statistics",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.topContributors",
-        "title": "CommitPilot AI: Top Contributors",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.topContributors",
+        "title": "GitIQ: Top Contributors",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.commitActivity",
-        "title": "CommitPilot AI: Commit Activity",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.commitActivity",
+        "title": "GitIQ: Commit Activity",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.exportHistoryReport",
-        "title": "CommitPilot AI: Export History Report",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.exportHistoryReport",
+        "title": "GitIQ: Export History Report",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.setApiKey",
-        "title": "CommitPilot AI: Set Groq API Key",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.setApiKey",
+        "title": "GitIQ: Set Groq API Key",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.updateApiKey",
-        "title": "CommitPilot AI: Update Groq API Key",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.updateApiKey",
+        "title": "GitIQ: Update Groq API Key",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.removeApiKey",
-        "title": "CommitPilot AI: Remove Groq API Key",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.removeApiKey",
+        "title": "GitIQ: Remove Groq API Key",
+        "category": "GitIQ"
       },
       {
-        "command": "commitPilotAI.selectModel",
-        "title": "CommitPilot AI: Select Groq Model",
-        "category": "CommitPilot AI"
+        "command": "gitIQ.selectModel",
+        "title": "GitIQ: Select Groq Model",
+        "category": "GitIQ"
       }
     ],
     "configuration": {
-      "title": "CommitPilot AI",
+      "title": "GitIQ",
       "properties": {
-        "commitPilotAI.apiKey": {
+        "gitIQ.apiKey": {
           "type": "string",
           "default": "",
           "scope": "window",
           "markdownDescription": "Groq API key used only when generating a commit-message suggestion or explaining commits."
         },
-        "commitPilotAI.provider": {
+        "gitIQ.provider": {
           "type": "string",
           "default": "groq",
           "enum": [
@@ -218,13 +276,13 @@
           "scope": "window",
           "description": "AI provider used for commit-message suggestions. Only Groq is currently available."
         },
-        "commitPilotAI.model": {
+        "gitIQ.model": {
           "type": "string",
           "default": "llama-3.3-70b-versatile",
           "scope": "window",
           "description": "Groq model identifier used to generate commit-message suggestions."
         },
-        "commitPilotAI.temperature": {
+        "gitIQ.temperature": {
           "type": "number",
           "default": 0.2,
           "minimum": 0,
@@ -232,7 +290,7 @@
           "scope": "window",
           "description": "Sampling temperature for generated commit-message suggestions."
         },
-        "commitPilotAI.timeout": {
+        "gitIQ.timeout": {
           "type": "number",
           "default": 30000,
           "minimum": 1,
@@ -247,14 +305,13 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
-    "check": "npm run compile && npm run lint",
-    "test": "npm run compile"
+    "check": "npm run compile && npm run lint"
   },
   "devDependencies": {
-    "@types/node": "^20.17.0",
+    "@types/node": "^20.17.10",
     "@types/vscode": "^1.95.0",
-    "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
     "eslint": "^9.17.0",
     "typescript": "^5.7.2"
   },

@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 
 /**
- * Provides in-memory, read-only documents for Git commit detail previews.
+ * Provides in-memory, read-only Virtual Document text for viewing full commit details and diff statistics.
  */
 export class CommitDetailsProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
-	public static readonly scheme = 'commitpilot-commit-details';
+	public static readonly scheme = 'gitiq-commit-details';
 
 	private readonly changeEmitter = new vscode.EventEmitter<vscode.Uri>();
-	private readonly contentMap = new Map<string, string>();
+	private readonly detailsMap = new Map<string, string>();
 
 	/** Signals VS Code when stored document content changes. */
 	public readonly onDidChange = this.changeEmitter.event;
@@ -20,17 +20,20 @@ export class CommitDetailsProvider implements vscode.TextDocumentContentProvider
 		);
 	}
 
+	public async showDetails(hash: string, fullOutput: string): Promise<void> {
+		await this.showCommitDetails(hash, fullOutput);
+	}
+
 	/**
-	 * Creates and displays a read-only document for the supplied commit details.
+	 * Displays commit details in a read-only document editor.
 	 */
-	public async showDetails(hash: string, detailsContent: string): Promise<void> {
-		const shortHash = hash.slice(0, 8);
+	public async showCommitDetails(hash: string, fullOutput: string): Promise<void> {
 		const uri = vscode.Uri.from({
 			scheme: CommitDetailsProvider.scheme,
-			path: `/Commit ${shortHash} - Details`
+			path: `/GitIQ - Commit ${hash.slice(0, 7)}.git`
 		});
 
-		this.contentMap.set(uri.toString(), detailsContent);
+		this.detailsMap.set(uri.toString(), fullOutput);
 		this.changeEmitter.fire(uri);
 
 		const document = await vscode.workspace.openTextDocument(uri);
@@ -38,14 +41,14 @@ export class CommitDetailsProvider implements vscode.TextDocumentContentProvider
 		await vscode.window.showTextDocument(document, { preview: true });
 	}
 
-	/** Returns stored content when VS Code resolves a provider URI. */
+	/** Returns stored content when VS Code resolves provider URI. */
 	public provideTextDocumentContent(uri: vscode.Uri): string {
-		return this.contentMap.get(uri.toString()) || '';
+		return this.detailsMap.get(uri.toString()) || '';
 	}
 
 	/** Disposes the change event emitter. */
 	public dispose(): void {
 		this.changeEmitter.dispose();
-		this.contentMap.clear();
+		this.detailsMap.clear();
 	}
 }

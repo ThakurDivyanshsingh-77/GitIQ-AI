@@ -4,11 +4,11 @@ import * as vscode from 'vscode';
  * Provides in-memory, read-only Markdown documents for AI-generated Pull Requests.
  */
 export class PullRequestProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
-	public static readonly scheme = 'commitpilot-pull-request';
+	public static readonly scheme = 'gitiq-pull-request';
 
 	private readonly uri = vscode.Uri.from({
 		scheme: PullRequestProvider.scheme,
-		path: '/CommitPilot AI - Pull Request.md'
+		path: '/GitIQ - Pull Request.md'
 	});
 
 	private readonly changeEmitter = new vscode.EventEmitter<vscode.Uri>();

@@ -27,7 +27,7 @@ export async function promptAndStoreApiKey(
 	}
 
 	const rawKey = await vscode.window.showInputBox({
-		title: 'CommitPilot AI: Set Groq API Key',
+		title: 'GitIQ: Set Groq API Key',
 		prompt: 'Enter your Groq API key (starts with "gsk_")',
 		password: true,
 		ignoreFocusOut: true,

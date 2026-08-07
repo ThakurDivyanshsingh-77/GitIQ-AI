@@ -3,18 +3,25 @@ import { Provider, type ProviderConfiguration } from '../types/provider';
 import {
 	CONFIGURATION_KEYS,
 	CONFIGURATION_SECTION,
-	GROQ_DEFAULT_MODEL
+	GROQ_DEFAULT_MODEL,
+	LEGACY_CONFIGURATION_SECTION
 } from '../utils/constants';
 import { ConfigurationError } from '../utils/errors';
 import type { LoggerService } from './loggerService';
 
 /** Key identifier used to store the Groq API key in VS Code SecretStorage. */
-export const SECRET_STORAGE_API_KEY = 'commitpilot.groqApiKey';
+export const SECRET_STORAGE_API_KEY = 'gitiq.groqApiKey';
+
+/** Legacy SecretStorage key for backward compatibility migration. */
+export const LEGACY_SECRET_STORAGE_API_KEY = 'commitpilot.groqApiKey';
 
 /** Complete configuration container including active provider. */
-export interface CommitPilotConfiguration extends ProviderConfiguration {
+export interface GitIQConfiguration extends ProviderConfiguration {
 	readonly provider: Provider;
 }
+
+/** Legacy type alias for GitIQConfiguration. */
+export type CommitPilotConfiguration = GitIQConfiguration;
 
 /** Supported Groq AI models available in model selector. */
 export const SUPPORTED_GROQ_MODELS = [
@@ -50,7 +57,7 @@ export class SettingsService {
 	) {}
 
 	/**
-	 * Retrieves the Groq API key securely from SecretStorage, with fallback to legacy settings.json.
+	 * Retrieves the Groq API key securely from SecretStorage (checking gitiq.groqApiKey and legacy keys).
 	 *
 	 * @returns Groq API key string or empty string if not found.
 	 */
@@ -60,17 +67,36 @@ export class SettingsService {
 			if (secretKey?.trim()) {
 				return secretKey.trim();
 			}
+
+			// Check legacy SecretStorage key
+			const legacySecretKey = await this.secrets.get(LEGACY_SECRET_STORAGE_API_KEY);
+			if (legacySecretKey?.trim()) {
+				// Migrate automatically
+				await this.secrets.store(SECRET_STORAGE_API_KEY, legacySecretKey.trim());
+				await this.secrets.delete(LEGACY_SECRET_STORAGE_API_KEY);
+				return legacySecretKey.trim();
+			}
 		} catch (error: unknown) {
 			this.logger?.warn(`SecretStorage get error: ${error instanceof Error ? error.message : String(error)}`);
 		}
 
-		// Fallback to settings.json
-		const legacyKey = this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey)?.trim();
-		return legacyKey || '';
+		// Fallback to gitIQ settings.json
+		const gitIQConfigKey = this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey)?.trim();
+		if (gitIQConfigKey) {
+			return gitIQConfigKey;
+		}
+
+		// Fallback to legacy commitPilotAI settings.json
+		const legacyConfigKey = vscode.workspace
+			.getConfiguration(LEGACY_CONFIGURATION_SECTION)
+			.get<string>(CONFIGURATION_KEYS.apiKey)
+			?.trim();
+
+		return legacyConfigKey || '';
 	}
 
 	/**
-	 * Stores the Groq API key securely in VS Code SecretStorage and removes any legacy key from settings.json.
+	 * Stores the Groq API key securely in VS Code SecretStorage and removes any legacy keys from settings.json.
 	 *
 	 * @param apiKey Raw API key string starting with 'gsk_'.
 	 */
@@ -84,18 +110,24 @@ export class SettingsService {
 			throw new ConfigurationError("Invalid Groq API key format. API key must start with 'gsk_'.");
 		}
 
-		this.logger?.info('Storing Groq API Key securely in SecretStorage...');
+		this.logger?.info('Storing Groq API Key securely in SecretStorage (gitiq.groqApiKey)...');
 		await this.secrets.store(SECRET_STORAGE_API_KEY, trimmedKey);
 
-		// Clean up legacy setting if present
-		const legacyKey = this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey);
-		if (legacyKey) {
-			this.logger?.info('Removing legacy API key from settings.json...');
+		// Clean up legacy SecretStorage key if present
+		await this.secrets.delete(LEGACY_SECRET_STORAGE_API_KEY);
+
+		// Clean up settings.json if present
+		if (this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey)) {
 			await this.getConfiguration().update(
 				CONFIGURATION_KEYS.apiKey,
 				undefined,
 				vscode.ConfigurationTarget.Global
 			);
+		}
+
+		const legacyConfig = vscode.workspace.getConfiguration(LEGACY_CONFIGURATION_SECTION);
+		if (legacyConfig.get<string>(CONFIGURATION_KEYS.apiKey)) {
+			await legacyConfig.update(CONFIGURATION_KEYS.apiKey, undefined, vscode.ConfigurationTarget.Global);
 		}
 	}
 
@@ -110,19 +142,24 @@ export class SettingsService {
 	}
 
 	/**
-	 * Deletes the stored Groq API key from SecretStorage and legacy settings.json.
+	 * Deletes the stored Groq API key from SecretStorage and legacy configuration.
 	 */
 	public async removeApiKey(): Promise<void> {
 		this.logger?.info('Removing Groq API Key from SecretStorage and configuration...');
 		await this.secrets.delete(SECRET_STORAGE_API_KEY);
+		await this.secrets.delete(LEGACY_SECRET_STORAGE_API_KEY);
 
-		const legacyKey = this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey);
-		if (legacyKey) {
+		if (this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey)) {
 			await this.getConfiguration().update(
 				CONFIGURATION_KEYS.apiKey,
 				undefined,
 				vscode.ConfigurationTarget.Global
 			);
+		}
+
+		const legacyConfig = vscode.workspace.getConfiguration(LEGACY_CONFIGURATION_SECTION);
+		if (legacyConfig.get<string>(CONFIGURATION_KEYS.apiKey)) {
+			await legacyConfig.update(CONFIGURATION_KEYS.apiKey, undefined, vscode.ConfigurationTarget.Global);
 		}
 	}
 
@@ -156,11 +193,17 @@ export class SettingsService {
 	}
 
 	/**
-	 * Offers automatic one-click migration if a valid Groq API key is found in settings.json.
+	 * Offers automatic one-click migration if a valid Groq API key is found in settings.json or legacy storage.
 	 */
 	public async migrateOldApiKeyIfNeeded(): Promise<void> {
-		const legacyKey = this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey)?.trim();
-		if (!legacyKey || !legacyKey.startsWith('gsk_')) {
+		const legacyConfigKey =
+			this.getConfiguration().get<string>(CONFIGURATION_KEYS.apiKey)?.trim() ||
+			vscode.workspace
+				.getConfiguration(LEGACY_CONFIGURATION_SECTION)
+				.get<string>(CONFIGURATION_KEYS.apiKey)
+				?.trim();
+
+		if (!legacyConfigKey || !legacyConfigKey.startsWith('gsk_')) {
 			return;
 		}
 
@@ -177,13 +220,13 @@ export class SettingsService {
 
 		this.logger?.info('Found legacy Groq API key in settings.json. Offering migration...');
 		const choice = await vscode.window.showInformationMessage(
-			'CommitPilot AI: A Groq API key was found in settings.json. Move API key to secure storage?',
+			'GitIQ: A Groq API key was found in settings.json. Move API key to secure storage?',
 			'Migrate Now',
 			'Ignore'
 		);
 
 		if (choice === 'Migrate Now') {
-			await this.setApiKey(legacyKey);
+			await this.setApiKey(legacyConfigKey);
 			void vscode.window.showInformationMessage('✓ Groq API Key migrated to secure storage successfully.');
 		}
 	}
@@ -197,11 +240,11 @@ export class SettingsService {
 		if (!hasKey) {
 			this.logger?.warn('No Groq API key configured.');
 			void vscode.window.showWarningMessage(
-				'CommitPilot AI: No Groq API key configured. Run "CommitPilot AI: Set Groq API Key".',
+				'GitIQ: No Groq API key configured. Run "GitIQ: Set Groq API Key".',
 				'Set API Key'
 			).then((selection) => {
 				if (selection === 'Set API Key') {
-					void vscode.commands.executeCommand('commitPilotAI.setApiKey');
+					void vscode.commands.executeCommand('gitIQ.setApiKey');
 				}
 			});
 			return false;
@@ -212,15 +255,15 @@ export class SettingsService {
 	}
 
 	/**
-	 * Creates an immutable CommitPilotConfiguration snapshot for initializing AI providers.
+	 * Creates an immutable GitIQConfiguration snapshot for initializing AI providers.
 	 *
-	 * @returns Promise resolving to complete CommitPilotConfiguration object.
+	 * @returns Promise resolving to complete GitIQConfiguration object.
 	 */
-	public async getConfigurationSnapshot(): Promise<CommitPilotConfiguration> {
+	public async getConfigurationSnapshot(): Promise<GitIQConfiguration> {
 		const apiKey = await this.getApiKey();
 		if (!apiKey) {
 			throw new ConfigurationError(
-				'Missing Groq API key. Please run "CommitPilot AI: Set Groq API Key".'
+				'Missing Groq API key. Please run "GitIQ: Set Groq API Key".'
 			);
 		}
 

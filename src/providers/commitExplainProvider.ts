@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 
 /**
- * Provides in-memory, read-only documents for AI Commit Explanations.
+ * Provides in-memory, read-only Markdown documents for AI Commit Explanations.
  */
 export class CommitExplainProvider implements vscode.TextDocumentContentProvider, vscode.Disposable {
-	public static readonly scheme = 'commitpilot-commit-explain';
+	public static readonly scheme = 'gitiq-commit-explain';
 
 	private readonly changeEmitter = new vscode.EventEmitter<vscode.Uri>();
-	private readonly contentMap = new Map<string, string>();
+	private readonly explanationMap = new Map<string, string>();
 
 	/** Signals VS Code when stored document content changes. */
 	public readonly onDidChange = this.changeEmitter.event;
@@ -23,23 +23,25 @@ export class CommitExplainProvider implements vscode.TextDocumentContentProvider
 	/**
 	 * Creates and displays a read-only Markdown document containing the AI explanation.
 	 */
-	public async showExplanation(hash: string, explanation: string): Promise<void> {
-		const shortHash = hash.slice(0, 8);
+	public async showExplanation(hash: string, subject: string, explanation: string): Promise<void> {
+		const shortHash = hash.slice(0, 7);
 		const uri = vscode.Uri.from({
 			scheme: CommitExplainProvider.scheme,
-			path: `/Commit ${shortHash} - AI Explanation.md`
+			path: `/GitIQ - Explanation ${shortHash}.md`
 		});
 
-		const formattedContent = [
-			`# 🤖 CommitPilot AI Explanation`,
-			`**Commit Hash:** \`${hash}\``,
+		const markdownContent = [
+			`# 🤖 GitIQ AI Commit Explanation`,
+			``,
+			`**Commit:** \`${shortHash}\``,
+			`**Subject:** ${subject}`,
 			``,
 			`---`,
 			``,
 			explanation
 		].join('\n');
 
-		this.contentMap.set(uri.toString(), formattedContent);
+		this.explanationMap.set(uri.toString(), markdownContent);
 		this.changeEmitter.fire(uri);
 
 		const document = await vscode.workspace.openTextDocument(uri);
@@ -47,14 +49,14 @@ export class CommitExplainProvider implements vscode.TextDocumentContentProvider
 		await vscode.window.showTextDocument(document, { preview: true });
 	}
 
-	/** Returns stored content when VS Code resolves a provider URI. */
+	/** Returns stored content when VS Code resolves provider URI. */
 	public provideTextDocumentContent(uri: vscode.Uri): string {
-		return this.contentMap.get(uri.toString()) || '';
+		return this.explanationMap.get(uri.toString()) || '';
 	}
 
 	/** Disposes the change event emitter. */
 	public dispose(): void {
 		this.changeEmitter.dispose();
-		this.contentMap.clear();
+		this.explanationMap.clear();
 	}
 }

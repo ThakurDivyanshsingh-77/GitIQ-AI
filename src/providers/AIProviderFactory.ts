@@ -9,8 +9,8 @@ export interface AIProviderFactory {
 	getProvider(provider: Provider): AIProvider;
 }
 
-/** Creates the provider implementations that are currently available to the extension. */
-export class CommitPilotAIProviderFactory implements AIProviderFactory {
+/** Creates the provider implementations that are currently available to GitIQ. */
+export class GitIQAIProviderFactory implements AIProviderFactory {
 	public constructor(private readonly logger?: LoggerService) {}
 
 	/** Returns a fresh provider to prevent configuration state from leaking between requests. */
@@ -22,3 +22,6 @@ export class CommitPilotAIProviderFactory implements AIProviderFactory {
 		throw new ProviderError(`The ${provider} provider is not available.`);
 	}
 }
+
+/** Legacy alias for GitIQAIProviderFactory. */
+export { GitIQAIProviderFactory as CommitPilotAIProviderFactory };

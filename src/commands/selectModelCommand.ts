@@ -31,7 +31,7 @@ export function registerSelectModelCommand(
 			}));
 
 			const selected = await vscode.window.showQuickPick(items, {
-				title: 'CommitPilot AI: Select Groq Model',
+				title: 'GitIQ: Select Groq Model',
 				placeHolder: 'Select a Groq AI model for commit and PR generation...'
 			});
 

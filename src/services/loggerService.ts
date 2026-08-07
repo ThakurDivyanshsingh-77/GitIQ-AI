@@ -1,45 +1,51 @@
 import * as vscode from 'vscode';
 
 /**
- * Provides centralized logging to a dedicated VS Code Output Channel ("CommitPilot AI").
+ * Provides centralized logging to a dedicated VS Code Output Channel ("GitIQ").
  */
 export class LoggerService implements vscode.Disposable {
 	private readonly channel: vscode.OutputChannel;
 
 	public constructor() {
-		this.channel = vscode.window.createOutputChannel('CommitPilot AI');
+		this.channel = vscode.window.createOutputChannel('GitIQ');
 	}
 
-	/** Logs an informational message with a timestamp. */
+	/** Logs an informational message. */
 	public info(message: string): void {
-		this.channel.appendLine(`[${this.getTimestamp()}] [INFO] ${message}`);
+		this.write('INFO', message);
 	}
 
-	/** Logs a warning message with a timestamp. */
+	/** Logs a warning message. */
 	public warn(message: string): void {
-		this.channel.appendLine(`[${this.getTimestamp()}] [WARN] ${message}`);
+		this.write('WARN', message);
 	}
 
-	/** Logs an error message with a timestamp and optional error details. */
+	/** Logs an error message with optional error details. */
 	public error(message: string, error?: unknown): void {
-		this.channel.appendLine(`[${this.getTimestamp()}] [ERROR] ${message}`);
-		if (error !== undefined) {
-			const details = error instanceof Error ? error.stack || error.message : String(error);
-			this.channel.appendLine(`  Details: ${details}`);
+		let details = message;
+		if (error instanceof Error) {
+			details += ` | Details: ${error.message}`;
+			if (error.stack) {
+				details += `\nStack trace:\n${error.stack}`;
+			}
+		} else if (error !== undefined) {
+			details += ` | Details: ${String(error)}`;
 		}
+		this.write('ERROR', details);
 	}
 
-	/** Shows the output channel in the VS Code Output panel. */
+	/** Focuses and brings the GitIQ output channel to the front. */
 	public show(): void {
 		this.channel.show(true);
 	}
 
-	/** Disposes the underlying output channel when the extension deactivates. */
+	/** Cleans up the OutputChannel resource. */
 	public dispose(): void {
 		this.channel.dispose();
 	}
 
-	private getTimestamp(): string {
-		return new Date().toISOString();
+	private write(level: 'INFO' | 'WARN' | 'ERROR', message: string): void {
+		const timestamp = new Date().toISOString();
+		this.channel.appendLine(`[GitIQ] ${timestamp} [${level}]: ${message}`);
 	}
 }

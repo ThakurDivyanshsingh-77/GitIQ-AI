@@ -30,7 +30,7 @@ export function registerSearchCommitHistoryCommand(
 			}
 
 			const keyword = await vscode.window.showInputBox({
-				title: 'Commit Pilot AI: Search Commit History',
+				title: 'GitIQ: Search Commit History',
 				prompt: 'Enter a keyword to search commit history...',
 				placeHolder: 'e.g. login, fix, refactor'
 			});

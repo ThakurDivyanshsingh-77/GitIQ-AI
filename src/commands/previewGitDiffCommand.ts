@@ -25,7 +25,7 @@ export function registerPreviewGitDiffCommand(
 			await vscode.window.withProgress(
 				{
 					location: vscode.ProgressLocation.Notification,
-					title: 'CommitPilot AI: Reading staged Git changes...',
+					title: 'GitIQ: Reading staged Git changes...',
 					cancellable: false
 				},
 				async (): Promise<void> => {
