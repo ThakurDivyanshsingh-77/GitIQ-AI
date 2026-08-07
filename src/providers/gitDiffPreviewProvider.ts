@@ -27,7 +27,8 @@ export class GitDiffPreviewProvider implements vscode.TextDocumentContentProvide
 
 	/**
 	 * Creates and displays a read-only Diff-language document for the supplied
-	 * staged changes. A unique query keeps each preview invocation independent.
+	 * staged changes. Reusing one URI refreshes the visible preview without
+	 * creating workspace files or retaining stale documents.
 	 */
 	public async showPreview(diff: string): Promise<void> {
 		this.content = diff;

@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { GitDiffPreviewProvider } from '../providers/gitDiffPreviewProvider';
 import { GitService } from '../services/gitService';
-
-const PREVIEW_GIT_DIFF_COMMAND_ID = 'commitPilotAI.previewGitDiff';
+import { COMMAND_IDS } from '../utils/constants';
 
 /**
  * Registers the staged-diff preview command. Git execution remains in
@@ -14,7 +13,7 @@ export function registerPreviewGitDiffCommand(
 	previewProvider: GitDiffPreviewProvider
 ): void {
 	const previewGitDiffCommand = vscode.commands.registerCommand(
-		PREVIEW_GIT_DIFF_COMMAND_ID,
+		COMMAND_IDS.previewGitDiff,
 		async (): Promise<void> => {
 			const workspaceFolders = vscode.workspace.workspaceFolders;
 

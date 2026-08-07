@@ -1,83 +1,56 @@
 # CommitPilot AI
 
-CommitPilot AI is a Visual Studio Code extension foundation for a future AI-powered Git commit-message workflow. Phase 3 can preview staged Git changes, but intentionally does not create commits or call AI/API services.
+CommitPilot AI is an AI-powered Git commit assistant, history explorer, and GitHub integration for Visual Studio Code. It previews staged changes, generates editable Conventional Commit messages via Groq AI, executes commits, explores commit history, explains commit diffs in plain English, and provides full Git + GitHub workflow commands.
 
-## Prerequisites
+## Features
 
-- [Node.js](https://nodejs.org/) 20 or later
-- Visual Studio Code 1.95 or later
+### AI-Powered
+- **Generate Conventional Commit Messages**: Analyzes staged diffs and generates structured Conventional Commit suggestions (`feat:`, `fix:`, `refactor:`, etc.).
+- **AI Commit Explanation**: Generates plain English explanations of any commit (purpose, affected files, major changes, impact).
 
-## Installation
+### Git History
+- **View Commit History**: Interactive QuickPick explorer (`git log -n 20`) with instant search/filtering by subject, author, or commit hash.
+- **Commit Details Viewer**: Inspect commit statistics (`git show <hash> --stat`) in a read-only document.
+- **Copy Commit Hash**: QuickPick command to copy commit hashes directly to clipboard.
+
+### Git Workflow
+- **Push Branch**: Push current branch to remote origin with progress notification.
+- **Pull Branch**: Pull latest changes from remote origin with merge conflict detection.
+- **Fetch Updates**: Fetch remote references (`git fetch`) with status notification.
+- **Show Current Branch**: Display the currently checked-out branch name.
+- **Repository Information**: Read-only Markdown document with repo name, branch, remote URL, latest commit, total commits, and working tree status.
+
+### GitHub Integration
+- **Open GitHub Repository**: Detect origin URL (SSH or HTTPS), convert to browser URL, and open in default browser.
+- **Open Current Branch on GitHub**: Automatically open `https://github.com/user/repo/tree/current-branch`.
+
+### Utilities
+- **Staged Diff Preview**: Read-only virtual diff document for previewing staged changes (`git diff --cached`).
+- **Dedicated Output Channel**: Complete diagnostic logging under Output → `CommitPilot AI`.
+
+## Commands Contributed
+
+| Command | ID |
+| :--- | :--- |
+| `CommitPilot AI: Hello` | `commitPilotAI.hello` |
+| `CommitPilot AI: Check Git Repository` | `commitPilotAI.checkGitRepository` |
+| `CommitPilot AI: Preview Git Diff` | `commitPilotAI.previewGitDiff` |
+| `CommitPilot AI: Generate Commit Message` | `commitPilotAI.generateCommitMessage` |
+| `CommitPilot AI: View Commit History` | `commitPilotAI.viewCommitHistory` |
+| `CommitPilot AI: Explain Commit` | `commitPilotAI.explainCommit` |
+| `CommitPilot AI: Copy Commit Hash` | `commitPilotAI.copyCommitHash` |
+| `CommitPilot AI: Push Branch` | `commitPilotAI.push` |
+| `CommitPilot AI: Pull Branch` | `commitPilotAI.pull` |
+| `CommitPilot AI: Fetch Updates` | `commitPilotAI.fetch` |
+| `CommitPilot AI: Show Current Branch` | `commitPilotAI.currentBranch` |
+| `CommitPilot AI: Repository Information` | `commitPilotAI.repositoryInfo` |
+| `CommitPilot AI: Open GitHub Repository` | `commitPilotAI.openRepository` |
+| `CommitPilot AI: Open Current Branch on GitHub` | `commitPilotAI.openBranch` |
+
+## Quality & Build Commands
 
 ```bash
-npm install
+npm run compile   # Compile TypeScript
+npm run lint      # Run ESLint checks
+npm run check     # Run compile + lint
 ```
-
-## Run in the Extension Development Host
-
-1. Open this folder in VS Code.
-2. Run `npm install` once to install development dependencies.
-3. Press `F5` (or select **Run CommitPilot AI** in Run and Debug).
-4. In the new Extension Development Host window, open the Command Palette with `Ctrl+Shift+P`.
-5. Run **CommitPilot AI: Hello**, **CommitPilot AI: Check Git Repository**, or **CommitPilot AI: Preview Git Diff**.
-
-The command displays: `CommitPilot AI is running successfully 🚀`
-
-The Git check displays one of the following:
-
-- `✅ Git repository detected.`
-- `❌ Current workspace is not a Git repository.`
-- `⚠ Please open a project folder first.`
-
-The Git diff preview opens a read-only `diff` document titled **CommitPilot AI - Git Diff Preview**. If no staged changes exist, it explains how to stage files with `git add .`.
-
-## Quality checks
-
-```bash
-npm run compile
-npm run lint
-npm run check
-```
-
-## Project structure
-
-```text
-.
-├── .vscode/
-│   ├── launch.json        # F5 Extension Development Host configuration
-│   └── tasks.json         # Background TypeScript watch task
-├── src/
-│   ├── commands/
-│   │   └── helloCommand.ts # Command registration and user-facing message
-│   │   └── checkGitRepositoryCommand.ts # Workspace-level Git check command
-│   │   └── previewGitDiffCommand.ts # Staged-diff preview command
-│   ├── providers/
-│   │   └── gitDiffPreviewProvider.ts # Read-only virtual diff documents
-│   ├── services/
-│   │   └── gitService.ts   # Isolated Git process integration
-│   ├── utils/              # Future shared utilities
-│   └── extension.ts        # Minimal extension lifecycle entry point
-├── .gitignore
-├── .vscodeignore            # Excludes development files from extension packages
-├── CHANGELOG.md             # Version history
-├── eslint.config.mjs       # TypeScript linting rules
-├── LICENSE                  # MIT licensing terms
-├── package.json            # Extension manifest, contributions, and scripts
-├── README.md               # Setup, run, test, and architecture guide
-└── tsconfig.json           # Strict TypeScript compiler configuration
-```
-
-## Phase 1 implementation
-
-- Registers `CommitPilot AI: Hello` under the command ID `commitPilotAI.hello`.
-- Registers `CommitPilot AI: Check Git Repository` under the command ID `commitPilotAI.checkGitRepository`.
-- Registers `CommitPilot AI: Preview Git Diff` under the command ID `commitPilotAI.previewGitDiff`.
-- Activates lazily when either contributed command is run.
-- Shows the required confirmation message through the official VS Code API.
-- Detects Git work trees through `git rev-parse --is-inside-work-tree`, without a shell or Git extension dependency.
-- Reads staged changes through `git diff --cached` and previews them in a read-only Diff-language document.
-- Keeps command behavior outside `extension.ts` and disposes registrations correctly.
-
-## Planned Phase 2
-
-Future phases can introduce staged-change collection behind the existing service/provider boundary. AI calls, APIs, and commit-message generation remain deliberately out of scope for this phase.

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { GitService } from '../services/gitService';
-
-const CHECK_GIT_REPOSITORY_COMMAND_ID = 'commitPilotAI.checkGitRepository';
+import { COMMAND_IDS } from '../utils/constants';
 
 /**
  * Registers the command that reports whether any folder in the current
@@ -12,7 +11,7 @@ export function registerCheckGitRepositoryCommand(
 	gitService: GitService
 ): void {
 	const checkGitRepositoryCommand = vscode.commands.registerCommand(
-		CHECK_GIT_REPOSITORY_COMMAND_ID,
+		COMMAND_IDS.checkGitRepository,
 		async (): Promise<void> => {
 			const workspaceFolders = vscode.workspace.workspaceFolders;
 

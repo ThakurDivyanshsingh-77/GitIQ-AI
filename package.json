@@ -1,7 +1,7 @@
 {
   "name": "commitpilot-ai",
   "displayName": "CommitPilot AI",
-  "description": "An AI-powered Git commit message assistant for Visual Studio Code.",
+  "description": "An AI-powered Git commit assistant, history explorer, and GitHub integration for Visual Studio Code.",
   "version": "0.1.0",
   "publisher": "commitpilot",
   "license": "MIT",
@@ -14,7 +14,18 @@
   "activationEvents": [
     "onCommand:commitPilotAI.hello",
     "onCommand:commitPilotAI.checkGitRepository",
-    "onCommand:commitPilotAI.previewGitDiff"
+    "onCommand:commitPilotAI.previewGitDiff",
+    "onCommand:commitPilotAI.generateCommitMessage",
+    "onCommand:commitPilotAI.viewCommitHistory",
+    "onCommand:commitPilotAI.explainCommit",
+    "onCommand:commitPilotAI.copyCommitHash",
+    "onCommand:commitPilotAI.push",
+    "onCommand:commitPilotAI.pull",
+    "onCommand:commitPilotAI.fetch",
+    "onCommand:commitPilotAI.repositoryInfo",
+    "onCommand:commitPilotAI.currentBranch",
+    "onCommand:commitPilotAI.openRepository",
+    "onCommand:commitPilotAI.openBranch"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -33,8 +44,107 @@
         "command": "commitPilotAI.previewGitDiff",
         "title": "CommitPilot AI: Preview Git Diff",
         "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.generateCommitMessage",
+        "title": "CommitPilot AI: Generate Commit Message",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.viewCommitHistory",
+        "title": "CommitPilot AI: View Commit History",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.explainCommit",
+        "title": "CommitPilot AI: Explain Commit",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.copyCommitHash",
+        "title": "CommitPilot AI: Copy Commit Hash",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.push",
+        "title": "CommitPilot AI: Push Branch",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.pull",
+        "title": "CommitPilot AI: Pull Branch",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.fetch",
+        "title": "CommitPilot AI: Fetch Updates",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.currentBranch",
+        "title": "CommitPilot AI: Show Current Branch",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.repositoryInfo",
+        "title": "CommitPilot AI: Repository Information",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.openRepository",
+        "title": "CommitPilot AI: Open GitHub Repository",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.openBranch",
+        "title": "CommitPilot AI: Open Current Branch on GitHub",
+        "category": "CommitPilot AI"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "CommitPilot AI",
+      "properties": {
+        "commitPilotAI.apiKey": {
+          "type": "string",
+          "default": "",
+          "scope": "window",
+          "markdownDescription": "Groq API key used only when generating a commit-message suggestion or explaining commits."
+        },
+        "commitPilotAI.provider": {
+          "type": "string",
+          "default": "groq",
+          "enum": [
+            "groq",
+            "openai",
+            "gemini",
+            "ollama"
+          ],
+          "scope": "window",
+          "description": "AI provider used for commit-message suggestions. Only Groq is currently available."
+        },
+        "commitPilotAI.model": {
+          "type": "string",
+          "default": "llama-3.3-70b-versatile",
+          "scope": "window",
+          "description": "Groq model identifier used to generate commit-message suggestions."
+        },
+        "commitPilotAI.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "minimum": 0,
+          "maximum": 2,
+          "scope": "window",
+          "description": "Sampling temperature for generated commit-message suggestions."
+        },
+        "commitPilotAI.timeout": {
+          "type": "number",
+          "default": 30000,
+          "minimum": 1,
+          "scope": "window",
+          "description": "Groq request timeout in milliseconds."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -51,5 +161,8 @@
     "@typescript-eslint/parser": "^8.18.0",
     "eslint": "^9.17.0",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "groq-sdk": "^1.5.0"
   }
 }
