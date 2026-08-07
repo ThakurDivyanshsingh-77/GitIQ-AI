@@ -30,8 +30,18 @@
     "onCommand:commitPilotAI.copyPRTitle",
     "onCommand:commitPilotAI.copyPRDescription",
     "onCommand:commitPilotAI.copyEntirePR",
+    "onCommand:commitPilotAI.copyEntirePullRequest",
     "onCommand:commitPilotAI.savePullRequest",
-    "onCommand:commitPilotAI.openPullRequestPage"
+    "onCommand:commitPilotAI.openPullRequestPage",
+    "onCommand:commitPilotAI.searchCommitHistory",
+    "onCommand:commitPilotAI.commitStatistics",
+    "onCommand:commitPilotAI.topContributors",
+    "onCommand:commitPilotAI.commitActivity",
+    "onCommand:commitPilotAI.exportHistoryReport",
+    "onCommand:commitPilotAI.setApiKey",
+    "onCommand:commitPilotAI.updateApiKey",
+    "onCommand:commitPilotAI.removeApiKey",
+    "onCommand:commitPilotAI.selectModel"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -127,6 +137,11 @@
         "category": "CommitPilot AI"
       },
       {
+        "command": "commitPilotAI.copyEntirePullRequest",
+        "title": "CommitPilot AI: Copy Entire Pull Request",
+        "category": "CommitPilot AI"
+      },
+      {
         "command": "commitPilotAI.savePullRequest",
         "title": "CommitPilot AI: Save Pull Request",
         "category": "CommitPilot AI"
@@ -134,6 +149,51 @@
       {
         "command": "commitPilotAI.openPullRequestPage",
         "title": "CommitPilot AI: Open Pull Request Page",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.searchCommitHistory",
+        "title": "CommitPilot AI: Search Commit History",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.commitStatistics",
+        "title": "CommitPilot AI: Commit Statistics",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.topContributors",
+        "title": "CommitPilot AI: Top Contributors",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.commitActivity",
+        "title": "CommitPilot AI: Commit Activity",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.exportHistoryReport",
+        "title": "CommitPilot AI: Export History Report",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.setApiKey",
+        "title": "CommitPilot AI: Set Groq API Key",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.updateApiKey",
+        "title": "CommitPilot AI: Update Groq API Key",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.removeApiKey",
+        "title": "CommitPilot AI: Remove Groq API Key",
+        "category": "CommitPilot AI"
+      },
+      {
+        "command": "commitPilotAI.selectModel",
+        "title": "CommitPilot AI: Select Groq Model",
         "category": "CommitPilot AI"
       }
     ],

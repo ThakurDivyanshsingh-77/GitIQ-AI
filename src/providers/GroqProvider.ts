@@ -67,7 +67,7 @@ export class GroqProvider implements AIProvider {
 					model,
 					messages: [{ role: 'user', content: request.prompt }],
 					temperature: configuration.temperature,
-					max_completion_tokens: 80,
+					max_completion_tokens: request.maxTokens ?? 80,
 					stream: false
 				});
 

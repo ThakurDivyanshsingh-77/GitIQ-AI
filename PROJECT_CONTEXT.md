@@ -12,6 +12,8 @@
 ### Core Features & Philosophy
 - **AI-Powered Commits**: Analyzes staged diffs and generates Conventional Commit messages. Suggestions are presented in an editable input box for developer review, then committed on Enter.
 - **AI Pull Request Generation**: Generates complete, professional PR documents with title, summary, description, files changed, testing, breaking changes, and checklist from branch diff and commit history.
+- **Secure Settings & Configuration**: Stores Groq API keys securely in VS Code `SecretStorage` (`vscode.SecretStorage`), offers one-click legacy migration, and provides a Groq Model Selector.
+- **Offline Commit History Analytics**: Search commit history by keyword, collect statistics, top contributors, 7-day activity, and export reports offline via Git CLI.
 - **Commit History Explorer**: Interactive QuickPick explorer with instant search, detail viewing, AI explanations, and hash copying.
 - **GitHub Integration**: Push, pull, fetch, branch display, repository information, direct GitHub browser navigation, and PR page opening.
 - **Clean Architecture**: Built with modular TypeScript services, providers, and decoupled command handlers for high maintainability and testability.
@@ -34,12 +36,15 @@ src/
 ├── extension.ts                      # Extension lifecycle & Composition Root
 ├── commands/                         # VS Code Command Handlers
 │   ├── checkGitRepositoryCommand.ts  # Workspace Git verification
+│   ├── commitActivityCommand.ts      # Render 7-day commit activity table
+│   ├── commitStatisticsCommand.ts    # Collect repository statistics summary
 │   ├── copyCommitHashCommand.ts      # Copy commit hash to clipboard
 │   ├── copyEntirePRCommand.ts        # Copy entire PR to clipboard
 │   ├── copyPRDescriptionCommand.ts   # Copy PR description to clipboard
 │   ├── copyPRTitleCommand.ts         # Copy PR title to clipboard
 │   ├── currentBranchCommand.ts       # Show current Git branch
 │   ├── explainCommitCommand.ts       # AI commit explanation workflow
+│   ├── exportHistoryReportCommand.ts # Export commit-history-report.md
 │   ├── fetchCommand.ts              # Git fetch remote updates
 │   ├── generateCommitMessageCommand.ts# Orchestrates AI suggestion UI
 │   ├── generatePullRequestCommand.ts # AI pull request generation workflow
@@ -50,9 +55,17 @@ src/
 │   ├── previewGitDiffCommand.ts      # Displays staged diff preview
 │   ├── pullCommand.ts               # Git pull from remote origin
 │   ├── pushCommand.ts               # Git push to remote origin
+│   ├── removeApiKeyCommand.ts        # Remove API key from SecretStorage
 │   ├── repositoryInfoCommand.ts      # Repo summary readonly document
 │   ├── savePullRequestCommand.ts     # Save PR as pull-request.md
+│   ├── searchCommitHistoryCommand.ts # Offline keyword search across commit log
+│   ├── selectModelCommand.ts        # QuickPick selector for Groq models
+│   ├── setApiKeyCommand.ts          # Prompt & store API key securely in SecretStorage
+│   ├── topContributorsCommand.ts     # Display ranked top contributors
+│   ├── updateApiKeyCommand.ts       # Update API key in SecretStorage
 │   └── viewCommitHistoryCommand.ts   # Interactive commit history explorer
+├── models/                           # Domain Data Models
+│   └── historyModels.ts              # Interfaces for SearchResultCommit, ContributorStat, DailyActivityStat, CommitStatistics
 ├── providers/                        # AI & Virtual Document Providers
 │   ├── AIProvider.ts                 # Abstract contract interface for AI services
 │   ├── AIProviderFactory.ts          # Provider resolution strategy factory
@@ -60,6 +73,7 @@ src/
 │   ├── commitExplainProvider.ts      # Read-only AI explanation documents
 │   ├── GroqProvider.ts               # Groq SDK AI completion client
 │   ├── gitDiffPreviewProvider.ts     # TextDocumentContentProvider for diff preview
+│   ├── historyPreviewProvider.ts     # Read-only analytics markdown documents
 │   ├── pullRequestProvider.ts       # Read-only AI pull request documents
 │   └── repoInfoProvider.ts          # Read-only repository info document
 ├── services/                         # Core Business Logic Services
@@ -67,9 +81,11 @@ src/
 │   ├── commitMessageValidator.ts     # Validates AI response format
 │   ├── configService.ts              # Typed VS Code configuration manager
 │   ├── gitService.ts                 # Isolated git binary process execution
+│   ├── historyService.ts             # Offline Git CLI commit analytics & report exporter
 │   ├── loggerService.ts              # Output channel logging service
 │   ├── promptBuilder.ts              # Deterministic AI prompt builder
-│   └── pullRequestService.ts        # AI pull request orchestration service
+│   ├── pullRequestService.ts        # AI pull request orchestration service
+│   └── SettingsService.ts           # SecretStorage API key & model settings manager
 ├── types/                            # TypeScript interfaces & domain types
 │   ├── commit.ts                     # Commit contracts & validation schemas
 │   └── provider.ts                   # Provider identifiers & config contracts
@@ -90,12 +106,15 @@ commitpilot-ai/
 ├── src/
 │   ├── commands/
 │   │   ├── checkGitRepositoryCommand.ts
+│   │   ├── commitActivityCommand.ts
+│   │   ├── commitStatisticsCommand.ts
 │   │   ├── copyCommitHashCommand.ts
 │   │   ├── copyEntirePRCommand.ts
 │   │   ├── copyPRDescriptionCommand.ts
 │   │   ├── copyPRTitleCommand.ts
 │   │   ├── currentBranchCommand.ts
 │   │   ├── explainCommitCommand.ts
+│   │   ├── exportHistoryReportCommand.ts
 │   │   ├── fetchCommand.ts
 │   │   ├── generateCommitMessageCommand.ts
 │   │   ├── generatePullRequestCommand.ts
@@ -108,7 +127,11 @@ commitpilot-ai/
 │   │   ├── pushCommand.ts
 │   │   ├── repositoryInfoCommand.ts
 │   │   ├── savePullRequestCommand.ts
+│   │   ├── searchCommitHistoryCommand.ts
+│   │   ├── topContributorsCommand.ts
 │   │   └── viewCommitHistoryCommand.ts
+│   ├── models/
+│   │   └── historyModels.ts
 │   ├── providers/
 │   │   ├── AIProvider.ts
 │   │   ├── AIProviderFactory.ts
@@ -116,6 +139,7 @@ commitpilot-ai/
 │   │   ├── commitExplainProvider.ts
 │   │   ├── GroqProvider.ts
 │   │   ├── gitDiffPreviewProvider.ts
+│   │   ├── historyPreviewProvider.ts
 │   │   ├── pullRequestProvider.ts
 │   │   └── repoInfoProvider.ts
 │   ├── services/
@@ -123,6 +147,7 @@ commitpilot-ai/
 │   │   ├── commitMessageValidator.ts
 │   │   ├── configService.ts
 │   │   ├── gitService.ts
+│   │   ├── historyService.ts
 │   │   ├── loggerService.ts
 │   │   ├── promptBuilder.ts
 │   │   └── pullRequestService.ts
@@ -190,6 +215,15 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 | `commitPilotAI.copyEntirePR` | `CommitPilot AI: Copy Entire Pull Request` | Copies the full generated PR Markdown to clipboard. |
 | `commitPilotAI.savePullRequest` | `CommitPilot AI: Save Pull Request` | Saves generated PR as `pull-request.md` in project root. |
 | `commitPilotAI.openPullRequestPage` | `CommitPilot AI: Open Pull Request Page` | Opens GitHub compare URL (`/compare/main...currentBranch`) for PR creation. |
+| `commitPilotAI.searchCommitHistory` | `CommitPilot AI: Search Commit History` | Offline keyword search across commit log (`git log --all --grep`). |
+| `commitPilotAI.commitStatistics` | `CommitPilot AI: Commit Statistics` | Aggregates repository commit metrics, counts, and age statistics. |
+| `commitPilotAI.topContributors` | `CommitPilot AI: Top Contributors` | Displays ranked contributor commit counts using `git shortlog -sn`. |
+| `commitPilotAI.commitActivity` | `CommitPilot AI: Commit Activity` | Displays 7-day commit activity breakdown as a Markdown table. |
+| `commitPilotAI.exportHistoryReport` | `CommitPilot AI: Export History Report` | Exports complete Markdown analytics report to `commit-history-report.md`. |
+| `commitPilotAI.setApiKey` | `CommitPilot AI: Set Groq API Key` | Prompts for Groq API key (starts with `gsk_`) and stores securely in VS Code `SecretStorage`. |
+| `commitPilotAI.updateApiKey` | `CommitPilot AI: Update Groq API Key` | Reuses secure prompt flow to update stored API key. |
+| `commitPilotAI.removeApiKey` | `CommitPilot AI: Remove Groq API Key` | Deletes stored API key from `SecretStorage` after confirmation. |
+| `commitPilotAI.selectModel` | `CommitPilot AI: Select Groq Model` | Displays QuickPick selector for supported Groq models and updates VS Code settings. |
 
 ### Virtual Scheme Registration
 - **`commitpilot-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
@@ -197,18 +231,22 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 - **`commitpilot-commit-explain:`**: `CommitExplainProvider` (Read-only Markdown document for AI commit explanations).
 - **`commitpilot-repo-info:`**: `RepoInfoProvider` (Read-only Markdown document for repository information summary).
 - **`commitpilot-pull-request:`**: `PullRequestProvider` (Read-only Markdown document for AI-generated pull requests).
+- **`commitpilot-history:`**: `HistoryPreviewProvider` (Read-only Markdown documents for commit history analytics previews).
 
 ---
 
 ## 6. Current Status & Changelog
 
-### Current Status: Phase 10 AI Pull Request Assistant Completed (`v0.1.0`)
+### Current Status: Phase 13 Settings & Configuration Completed (`v0.1.0`)
 - [x] Complete TypeScript structure & strict compiler setup.
 - [x] Extension activation lifecycle & command registration in `extension.ts`.
 - [x] Dedicated Output Channel logging via `LoggerService` ("CommitPilot AI").
-- [x] Startup configuration validation (`validateConfiguration`) in `ConfigService`.
+- [x] Startup configuration validation (`validateConfiguration`) in `SettingsService`.
+- [x] Secret Storage API key management (`setApiKey`, `updateApiKey`, `removeApiKey`) using `vscode.SecretStorage`.
+- [x] Automatic one-click migration of legacy API keys from `settings.json` to `SecretStorage`.
+- [x] Groq Model Selector (`selectModelCommand`) with QuickPick for supported models.
 - [x] Git commit history retrieval (`getCommitHistory`) and commit detail inspection (`getCommitDetails`).
-- [x] Interactive commit history QuickPick search (`viewCommitHistoryCommand`) with `$(git-commit)` icons and filter support.
+- [x] Interactive commit history QuickPick search (`viewCommitHistoryCommand`).
 - [x] Virtual read-only commit details document provider (`CommitDetailsProvider`).
 - [x] Plain English AI Commit Explanation workflow (`explainCommitCommand` & `CommitExplainProvider`).
 - [x] Clipboard commit hash copying (`copyCommitHashCommand`).
@@ -217,16 +255,19 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 - [x] Transient failure auto-retry logic in `GroqProvider`.
 - [x] Robust AI response sanitization (`CommitMessageValidator.sanitize`) and validation.
 - [x] Git commit execution (`GitService.commit`) on user Enter confirmation.
-- [x] Git push (`push`), pull (`pull`), and fetch (`fetch`) with progress notifications and error handling.
+- [x] Git push (`push`), pull (`pull`), and fetch (`fetch`) with progress notifications.
 - [x] Current branch display (`getCurrentBranch`) including detached HEAD detection.
 - [x] Repository information summary document (`getRepositoryInfo` & `RepoInfoProvider`).
-- [x] GitHub browser navigation: Open Repository and Open Current Branch via SSH/HTTPS URL conversion.
+- [x] GitHub browser navigation: Open Repository and Open Current Branch.
 - [x] AI Pull Request generation with structured prompt, title/description parsing, and validation.
 - [x] Copy PR Title, Copy PR Description, Copy Entire PR clipboard commands.
 - [x] Save Pull Request as `pull-request.md` to project root.
 - [x] Open GitHub compare page for PR creation.
-- [x] Default branch detection (`getDefaultBranch`) via `symbolic-ref` and heuristic fallback.
-- [x] Branch diff (`getBranchDiff`) and branch commits (`getBranchCommits`) for PR context.
+- [x] Offline Git commit search (`searchCommitHistoryCommand`).
+- [x] Offline commit statistics (`commitStatisticsCommand`).
+- [x] Offline top contributors ranking (`topContributorsCommand`).
+- [x] Offline 7-day commit activity table (`commitActivityCommand`).
+- [x] Offline report exporter (`exportHistoryReportCommand`).
 - [x] Code quality verification (`npm run check`) passing with zero errors or warnings.
 
 ---
@@ -239,6 +280,7 @@ State management relies on VS Code Workspace Configuration settings (`commitPilo
 - [ ] **Source Control UI Integration**: Add an inline button to the VS Code Source Control (SCM) panel to generate commit messages directly into the SCM input box.
 - [ ] **Unit / Integration Tests**: Add automated unit test suite (`vscode-test` / `mocha`).
 - [x] **GitHub PR Integration**: AI Pull Request generation with copy, save, and compare page features (Phase 10).
+- [x] **Commit History Analytics**: Offline commit search, repo statistics, top contributors, 7-day activity, and report export (Phase 12).
 
 ### Known Issues
 - *None currently identified.*

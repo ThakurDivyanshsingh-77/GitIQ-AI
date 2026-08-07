@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
 import { registerCheckGitRepositoryCommand } from './commands/checkGitRepositoryCommand';
+import { registerCommitActivityCommand } from './commands/commitActivityCommand';
+import { registerCommitStatisticsCommand } from './commands/commitStatisticsCommand';
 import { registerCopyCommitHashCommand } from './commands/copyCommitHashCommand';
 import { registerCopyEntirePRCommand } from './commands/copyEntirePRCommand';
 import { registerCopyPRDescriptionCommand } from './commands/copyPRDescriptionCommand';
 import { registerCopyPRTitleCommand } from './commands/copyPRTitleCommand';
 import { registerCurrentBranchCommand } from './commands/currentBranchCommand';
 import { registerExplainCommitCommand } from './commands/explainCommitCommand';
+import { registerExportHistoryReportCommand } from './commands/exportHistoryReportCommand';
 import { registerFetchCommand } from './commands/fetchCommand';
 import { registerGenerateCommitMessageCommand } from './commands/generateCommitMessageCommand';
 import { registerGeneratePullRequestCommand } from './commands/generatePullRequestCommand';
@@ -16,22 +19,30 @@ import { registerOpenRepositoryCommand } from './commands/openRepositoryCommand'
 import { registerPreviewGitDiffCommand } from './commands/previewGitDiffCommand';
 import { registerPullCommand } from './commands/pullCommand';
 import { registerPushCommand } from './commands/pushCommand';
+import { registerRemoveApiKeyCommand } from './commands/removeApiKeyCommand';
 import { registerRepositoryInfoCommand } from './commands/repositoryInfoCommand';
 import { registerSavePullRequestCommand } from './commands/savePullRequestCommand';
+import { registerSearchCommitHistoryCommand } from './commands/searchCommitHistoryCommand';
+import { registerSelectModelCommand } from './commands/selectModelCommand';
+import { registerSetApiKeyCommand } from './commands/setApiKeyCommand';
+import { registerTopContributorsCommand } from './commands/topContributorsCommand';
+import { registerUpdateApiKeyCommand } from './commands/updateApiKeyCommand';
 import { registerViewCommitHistoryCommand } from './commands/viewCommitHistoryCommand';
 import { CommitPilotAIProviderFactory } from './providers/AIProviderFactory';
 import { CommitDetailsProvider } from './providers/commitDetailsProvider';
 import { CommitExplainProvider } from './providers/commitExplainProvider';
 import { GitDiffPreviewProvider } from './providers/gitDiffPreviewProvider';
+import { HistoryPreviewProvider } from './providers/historyPreviewProvider';
 import { PullRequestProvider } from './providers/pullRequestProvider';
 import { RepoInfoProvider } from './providers/repoInfoProvider';
 import { CommitMessageService } from './services/commitMessageService';
 import { CommitMessageValidator } from './services/commitMessageValidator';
-import { ConfigService } from './services/configService';
 import { GitService } from './services/gitService';
+import { HistoryService } from './services/historyService';
 import { LoggerService } from './services/loggerService';
 import { PromptBuilder } from './services/promptBuilder';
 import { PullRequestService } from './services/pullRequestService';
+import { SettingsService } from './services/SettingsService';
 
 let loggerService: LoggerService | undefined;
 
@@ -45,22 +56,27 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	loggerService.info('Activating CommitPilot AI extension...');
 
-	const configService = new ConfigService();
-	configService.validateConfiguration(loggerService);
+	const settingsService = new SettingsService(context.secrets, loggerService);
+
+	// Run migration and non-blocking validation asynchronously
+	void settingsService.migrateOldApiKeyIfNeeded();
+	void settingsService.validateConfiguration();
 
 	const gitService = new GitService(loggerService);
+	const historyService = new HistoryService(gitService, loggerService);
 	const gitDiffPreviewProvider = new GitDiffPreviewProvider();
 	const commitDetailsProvider = new CommitDetailsProvider();
 	const commitExplainProvider = new CommitExplainProvider();
 	const repoInfoProvider = new RepoInfoProvider();
 	const pullRequestProvider = new PullRequestProvider();
+	const historyPreviewProvider = new HistoryPreviewProvider();
 	const providerFactory = new CommitPilotAIProviderFactory(loggerService);
 	const commitMessageValidator = new CommitMessageValidator();
 	const promptBuilder = new PromptBuilder();
 
 	const commitMessageService = new CommitMessageService(
 		gitService,
-		configService,
+		settingsService,
 		promptBuilder,
 		providerFactory,
 		commitMessageValidator,
@@ -69,7 +85,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	const pullRequestService = new PullRequestService(
 		gitService,
-		configService,
+		settingsService,
 		promptBuilder,
 		providerFactory,
 		loggerService
@@ -80,6 +96,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	commitExplainProvider.register(context);
 	repoInfoProvider.register(context);
 	pullRequestProvider.register(context);
+	historyPreviewProvider.register(context);
 
 	// Phase 1–7 commands
 	registerHelloCommand(context);
@@ -108,6 +125,19 @@ export function activate(context: vscode.ExtensionContext): void {
 	registerCopyEntirePRCommand(context, loggerService);
 	registerSavePullRequestCommand(context, loggerService);
 	registerOpenPullRequestPageCommand(context, gitService, loggerService);
+
+	// Phase 12 commands (AI Commit History Analytics - Offline Git CLI)
+	registerSearchCommitHistoryCommand(context, historyService, historyPreviewProvider, loggerService);
+	registerCommitStatisticsCommand(context, historyService, historyPreviewProvider, loggerService);
+	registerTopContributorsCommand(context, historyService, historyPreviewProvider, loggerService);
+	registerCommitActivityCommand(context, historyService, historyPreviewProvider, loggerService);
+	registerExportHistoryReportCommand(context, historyService, loggerService);
+
+	// Phase 13 commands (Settings & Configuration - SecretStorage & Groq Model Selector)
+	registerSetApiKeyCommand(context, settingsService, loggerService);
+	registerUpdateApiKeyCommand(context, settingsService, loggerService);
+	registerRemoveApiKeyCommand(context, settingsService, loggerService);
+	registerSelectModelCommand(context, settingsService, loggerService);
 
 	loggerService.info('CommitPilot AI extension activated successfully 🚀');
 }

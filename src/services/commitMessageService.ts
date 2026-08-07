@@ -1,10 +1,10 @@
 import type { AIProviderFactory } from '../providers/AIProviderFactory';
 import type { CommitMessage } from '../types/commit';
 import { InvalidCommitMessageError, NoStagedChangesError, NotGitRepositoryError } from '../utils/errors';
-import { ConfigService } from './configService';
-import { GitService } from './gitService';
-import { CommitMessageValidator } from './commitMessageValidator';
-import { PromptBuilder } from './promptBuilder';
+import type { SettingsService } from './SettingsService';
+import type { GitService } from './gitService';
+import type { CommitMessageValidator } from './commitMessageValidator';
+import type { PromptBuilder } from './promptBuilder';
 import type { LoggerService } from './loggerService';
 
 /** Return container holding the generated CommitMessage and prompt truncation status. */
@@ -19,7 +19,7 @@ export interface GenerationResult {
 export class CommitMessageService {
 	public constructor(
 		private readonly gitService: GitService,
-		private readonly configService: ConfigService,
+		private readonly settingsService: SettingsService,
 		private readonly promptBuilder: PromptBuilder,
 		private readonly providerFactory: AIProviderFactory,
 		private readonly commitMessageValidator: CommitMessageValidator,
@@ -43,7 +43,7 @@ export class CommitMessageService {
 			throw new NoStagedChangesError('No staged changes found.');
 		}
 
-		const configuration = this.configService.getConfigurationSnapshot();
+		const configuration = await this.settingsService.getConfigurationSnapshot();
 		const provider = this.providerFactory.getProvider(configuration.provider);
 		const promptResult = this.promptBuilder.buildCommitMessagePrompt(stagedDiff.content);
 
@@ -102,7 +102,7 @@ export class CommitMessageService {
 		}
 
 		const promptResult = this.promptBuilder.buildCommitExplainPrompt(rawCommitShow);
-		const configuration = this.configService.getConfigurationSnapshot();
+		const configuration = await this.settingsService.getConfigurationSnapshot();
 		const provider = this.providerFactory.getProvider(configuration.provider);
 
 		await provider.initialize(configuration);
@@ -112,7 +112,8 @@ export class CommitMessageService {
 			stagedDiff: rawCommitShow,
 			prompt: promptResult.prompt,
 			provider: configuration.provider,
-			model: configuration.model
+			model: configuration.model,
+			maxTokens: 512
 		});
 
 		this.logger?.info(`AI commit explanation received successfully for ${hash}.`);

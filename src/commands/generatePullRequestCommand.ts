@@ -67,7 +67,7 @@ export function registerGeneratePullRequestCommand(
 			} catch (error: unknown) {
 				const message = error instanceof Error ? error.message : String(error);
 				logger?.error(`PR generation failed: ${message}`, error);
-				void vscode.window.showErrorMessage(`Unable to generate pull request: ${message}`);
+				void vscode.window.showErrorMessage(message);
 			}
 		}
 	);

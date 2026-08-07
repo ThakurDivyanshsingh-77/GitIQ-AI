@@ -6,12 +6,13 @@ export interface CommitMessage {
 	readonly body?: string;
 }
 
-/** Input passed to an AI provider when commit generation is introduced. */
+/** Input passed to an AI provider when commit or PR generation is invoked. */
 export interface CommitRequest {
 	readonly stagedDiff: string;
 	readonly prompt: string;
 	readonly provider: Provider;
 	readonly model?: string;
+	readonly maxTokens?: number;
 }
 
 /** Normalized result returned by any AI provider implementation. */

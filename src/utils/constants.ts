@@ -73,8 +73,18 @@ export const COMMAND_IDS = {
 	copyPRTitle: 'commitPilotAI.copyPRTitle',
 	copyPRDescription: 'commitPilotAI.copyPRDescription',
 	copyEntirePR: 'commitPilotAI.copyEntirePR',
+	copyEntirePullRequest: 'commitPilotAI.copyEntirePullRequest',
 	savePullRequest: 'commitPilotAI.savePullRequest',
-	openPullRequestPage: 'commitPilotAI.openPullRequestPage'
+	openPullRequestPage: 'commitPilotAI.openPullRequestPage',
+	searchCommitHistory: 'commitPilotAI.searchCommitHistory',
+	commitStatistics: 'commitPilotAI.commitStatistics',
+	topContributors: 'commitPilotAI.topContributors',
+	commitActivity: 'commitPilotAI.commitActivity',
+	exportHistoryReport: 'commitPilotAI.exportHistoryReport',
+	setApiKey: 'commitPilotAI.setApiKey',
+	updateApiKey: 'commitPilotAI.updateApiKey',
+	removeApiKey: 'commitPilotAI.removeApiKey',
+	selectModel: 'commitPilotAI.selectModel'
 } as const;
 
 /** Human-readable names used when presenting provider choices in UI. */

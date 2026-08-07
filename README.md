@@ -1,13 +1,25 @@
 # CommitPilot AI
 
-CommitPilot AI is an AI-powered Git commit assistant, history explorer, pull request generator, and GitHub integration for Visual Studio Code. It previews staged changes, generates editable Conventional Commit messages via Groq AI, executes commits, explores commit history, explains commit diffs in plain English, generates complete pull requests, and provides full Git + GitHub workflow commands.
+CommitPilot AI is an AI-powered Git commit assistant, history explorer, pull request generator, history analytics engine, and GitHub integration for Visual Studio Code. It previews staged changes, generates editable Conventional Commit messages via Groq AI, executes commits, explores commit history, explains commit diffs in plain English, generates complete pull requests, provides offline Git history analytics, and manages secure API key storage and Groq models.
 
 ## Features
+
+### Secure Settings & Configuration
+- **Secure API Key Manager**: Store Groq API keys safely in VS Code `SecretStorage` (`vscode.SecretStorage`). Keys are never saved in plain text in `settings.json`.
+- **Automatic Migration**: Detects legacy API keys in `settings.json` and offers one-click migration to secure `SecretStorage`.
+- **Groq Model Selector**: QuickPick model selector supporting `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b`, and `deepseek-r1-distill-llama-70b`.
 
 ### AI-Powered
 - **Generate Conventional Commit Messages**: Analyzes staged diffs and generates structured Conventional Commit suggestions (`feat:`, `fix:`, `refactor:`, etc.).
 - **AI Commit Explanation**: Generates plain English explanations of any commit (purpose, affected files, major changes, impact).
 - **AI Pull Request Generation**: Generates complete, professional pull request documents with title, summary, detailed description, files changed, testing, breaking changes, checklist, and known limitations.
+
+### Offline Commit History Analytics (Git CLI)
+- **Search Commit History**: Offline search across commit subjects and author metadata via Git CLI (`git log --all --grep`).
+- **Commit Statistics**: Aggregates total commits, today's commits, last 7/30 days, average commits/day, repo age, first/latest commit dates, and branch name.
+- **Top Contributors**: Ranked contributor commit counts computed offline via `git shortlog -sn`.
+- **Commit Activity**: 7-day commit activity breakdown rendered as a Markdown table.
+- **Export Report**: Export a complete Markdown analytics report to `commit-history-report.md` in the project root.
 
 ### Pull Request Workflow
 - **Generate Pull Request**: AI-powered PR document from branch diff and commit history.
@@ -20,20 +32,14 @@ CommitPilot AI is an AI-powered Git commit assistant, history explorer, pull req
 - **Commit Details Viewer**: Inspect commit statistics (`git show <hash> --stat`) in a read-only document.
 - **Copy Commit Hash**: QuickPick command to copy commit hashes directly to clipboard.
 
-### Git Workflow
+### Git Workflow & GitHub Integration
 - **Push Branch**: Push current branch to remote origin with progress notification.
 - **Pull Branch**: Pull latest changes from remote origin with merge conflict detection.
 - **Fetch Updates**: Fetch remote references (`git fetch`) with status notification.
 - **Show Current Branch**: Display the currently checked-out branch name.
 - **Repository Information**: Read-only Markdown document with repo name, branch, remote URL, latest commit, total commits, and working tree status.
-
-### GitHub Integration
-- **Open GitHub Repository**: Detect origin URL (SSH or HTTPS), convert to browser URL, and open in default browser.
-- **Open Current Branch on GitHub**: Automatically open `https://github.com/user/repo/tree/current-branch`.
-
-### Utilities
-- **Staged Diff Preview**: Read-only virtual diff document for previewing staged changes (`git diff --cached`).
-- **Dedicated Output Channel**: Complete diagnostic logging under Output → `CommitPilot AI`.
+- **Open GitHub Repository**: Convert origin URL to HTTPS and open in browser.
+- **Open Current Branch on GitHub**: Open `https://github.com/user/repo/tree/current-branch`.
 
 ## Commands Contributed
 
@@ -59,6 +65,15 @@ CommitPilot AI is an AI-powered Git commit assistant, history explorer, pull req
 | `CommitPilot AI: Copy Entire Pull Request` | `commitPilotAI.copyEntirePR` |
 | `CommitPilot AI: Save Pull Request` | `commitPilotAI.savePullRequest` |
 | `CommitPilot AI: Open Pull Request Page` | `commitPilotAI.openPullRequestPage` |
+| `CommitPilot AI: Search Commit History` | `commitPilotAI.searchCommitHistory` |
+| `CommitPilot AI: Commit Statistics` | `commitPilotAI.commitStatistics` |
+| `CommitPilot AI: Top Contributors` | `commitPilotAI.topContributors` |
+| `CommitPilot AI: Commit Activity` | `commitPilotAI.commitActivity` |
+| `CommitPilot AI: Export History Report` | `commitPilotAI.exportHistoryReport` |
+| `CommitPilot AI: Set Groq API Key` | `commitPilotAI.setApiKey` |
+| `CommitPilot AI: Update Groq API Key` | `commitPilotAI.updateApiKey` |
+| `CommitPilot AI: Remove Groq API Key` | `commitPilotAI.removeApiKey` |
+| `CommitPilot AI: Select Groq Model` | `commitPilotAI.selectModel` |
 
 ## Quality & Build Commands
 
