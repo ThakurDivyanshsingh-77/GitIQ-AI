@@ -3,7 +3,7 @@
   "displayName": "GitIQ",
   "description": "AI-Powered Git Assistant for Visual Studio Code",
   "version": "1.0.0",
-  "publisher": "gitiq",
+  "publisher": "ThakurDivyanshsingh",
   "icon": "icon.png",
   "license": "MIT",
   "engines": {
@@ -11,7 +11,8 @@
   },
   "categories": [
     "SCM Providers",
-    "Other"
+    "Other",
+    "Productivity"
   ],
   "keywords": [
     "git",
@@ -50,14 +51,13 @@
     "onCommand:gitIQ.push",
     "onCommand:gitIQ.pull",
     "onCommand:gitIQ.fetch",
-    "onCommand:gitIQ.repositoryInfo",
     "onCommand:gitIQ.currentBranch",
+    "onCommand:gitIQ.repositoryInfo",
     "onCommand:gitIQ.openRepository",
     "onCommand:gitIQ.openBranch",
     "onCommand:gitIQ.generatePullRequest",
     "onCommand:gitIQ.copyPRTitle",
     "onCommand:gitIQ.copyPRDescription",
-    "onCommand:gitIQ.copyEntirePR",
     "onCommand:gitIQ.copyEntirePullRequest",
     "onCommand:gitIQ.savePullRequest",
     "onCommand:gitIQ.openPullRequestPage",
@@ -69,37 +69,7 @@
     "onCommand:gitIQ.setApiKey",
     "onCommand:gitIQ.updateApiKey",
     "onCommand:gitIQ.removeApiKey",
-    "onCommand:gitIQ.selectModel",
-    "onCommand:commitPilotAI.hello",
-    "onCommand:commitPilotAI.checkGitRepository",
-    "onCommand:commitPilotAI.previewGitDiff",
-    "onCommand:commitPilotAI.generateCommitMessage",
-    "onCommand:commitPilotAI.viewCommitHistory",
-    "onCommand:commitPilotAI.explainCommit",
-    "onCommand:commitPilotAI.copyCommitHash",
-    "onCommand:commitPilotAI.push",
-    "onCommand:commitPilotAI.pull",
-    "onCommand:commitPilotAI.fetch",
-    "onCommand:commitPilotAI.repositoryInfo",
-    "onCommand:commitPilotAI.currentBranch",
-    "onCommand:commitPilotAI.openRepository",
-    "onCommand:commitPilotAI.openBranch",
-    "onCommand:commitPilotAI.generatePullRequest",
-    "onCommand:commitPilotAI.copyPRTitle",
-    "onCommand:commitPilotAI.copyPRDescription",
-    "onCommand:commitPilotAI.copyEntirePR",
-    "onCommand:commitPilotAI.copyEntirePullRequest",
-    "onCommand:commitPilotAI.savePullRequest",
-    "onCommand:commitPilotAI.openPullRequestPage",
-    "onCommand:commitPilotAI.searchCommitHistory",
-    "onCommand:commitPilotAI.commitStatistics",
-    "onCommand:commitPilotAI.topContributors",
-    "onCommand:commitPilotAI.commitActivity",
-    "onCommand:commitPilotAI.exportHistoryReport",
-    "onCommand:commitPilotAI.setApiKey",
-    "onCommand:commitPilotAI.updateApiKey",
-    "onCommand:commitPilotAI.removeApiKey",
-    "onCommand:commitPilotAI.selectModel"
+    "onCommand:gitIQ.selectModel"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -187,11 +157,6 @@
       {
         "command": "gitIQ.copyPRDescription",
         "title": "GitIQ: Copy PR Description",
-        "category": "GitIQ"
-      },
-      {
-        "command": "gitIQ.copyEntirePR",
-        "title": "GitIQ: Copy Entire Pull Request",
         "category": "GitIQ"
       },
       {
