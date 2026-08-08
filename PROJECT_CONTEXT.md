@@ -7,7 +7,7 @@
 
 ## 1. Project Overview
 
-**GitIQ** (`gitiq`) is an AI-powered Visual Studio Code extension designed to streamline Git workflows. It inspects staged Git changes and generates structured, Conventional Commit suggestions powered by AI (Groq API), explores commit history, explains diffs with AI, generates complete pull requests, provides offline commit history analytics, and integrates with GitHub.
+**GitIQ** (`gitiq`) is an AI-powered Visual Studio Code extension designed to streamline Git workflows (Publisher: `gitiq`, Extension ID: `gitiq.gitiq`). It inspects staged Git changes and generates structured, Conventional Commit suggestions powered by AI (Groq API), explores commit history, explains diffs with AI, generates complete pull requests, provides offline commit history analytics, and integrates with GitHub.
 
 ### Core Features & Philosophy
 - **AI-Powered Commits**: Analyzes staged diffs and generates Conventional Commit messages. Suggestions are presented in an editable input box for developer review, then committed on Enter.
