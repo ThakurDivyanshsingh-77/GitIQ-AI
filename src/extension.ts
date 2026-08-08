@@ -51,95 +51,105 @@ let loggerService: LoggerService | undefined;
  * Handles service composition, configuration validation, and output logging.
  */
 export function activate(context: vscode.ExtensionContext): void {
-	loggerService = new LoggerService();
-	context.subscriptions.push(loggerService);
+	try {
+		loggerService = new LoggerService();
+		context.subscriptions.push(loggerService);
 
-	loggerService.info('Activating GitIQ extension...');
+		loggerService.info('Activating GitIQ extension...');
 
-	const settingsService = new SettingsService(context.secrets, loggerService);
+		const settingsService = new SettingsService(context.secrets, loggerService);
 
-	// Run migration and non-blocking validation asynchronously
-	void settingsService.migrateOldApiKeyIfNeeded();
-	void settingsService.validateConfiguration();
+		// Run migration and non-blocking validation asynchronously without letting them block activation
+		try {
+			void settingsService.migrateOldApiKeyIfNeeded();
+			void settingsService.validateConfiguration();
+		} catch (migError) {
+			loggerService.warn(`Non-blocking activation check failed: ${migError instanceof Error ? migError.message : String(migError)}`);
+		}
 
-	const gitService = new GitService(loggerService);
-	const historyService = new HistoryService(gitService, loggerService);
-	const gitDiffPreviewProvider = new GitDiffPreviewProvider();
-	const commitDetailsProvider = new CommitDetailsProvider();
-	const commitExplainProvider = new CommitExplainProvider();
-	const repoInfoProvider = new RepoInfoProvider();
-	const pullRequestProvider = new PullRequestProvider();
-	const historyPreviewProvider = new HistoryPreviewProvider();
-	const providerFactory = new GitIQAIProviderFactory(loggerService);
-	const commitMessageValidator = new CommitMessageValidator();
-	const promptBuilder = new PromptBuilder();
+		const gitService = new GitService(loggerService);
+		const historyService = new HistoryService(gitService, loggerService);
+		const gitDiffPreviewProvider = new GitDiffPreviewProvider();
+		const commitDetailsProvider = new CommitDetailsProvider();
+		const commitExplainProvider = new CommitExplainProvider();
+		const repoInfoProvider = new RepoInfoProvider();
+		const pullRequestProvider = new PullRequestProvider();
+		const historyPreviewProvider = new HistoryPreviewProvider();
+		const providerFactory = new GitIQAIProviderFactory(loggerService);
+		const commitMessageValidator = new CommitMessageValidator();
+		const promptBuilder = new PromptBuilder();
 
-	const commitMessageService = new CommitMessageService(
-		gitService,
-		settingsService,
-		promptBuilder,
-		providerFactory,
-		commitMessageValidator,
-		loggerService
-	);
+		const commitMessageService = new CommitMessageService(
+			gitService,
+			settingsService,
+			promptBuilder,
+			providerFactory,
+			commitMessageValidator,
+			loggerService
+		);
 
-	const pullRequestService = new PullRequestService(
-		gitService,
-		settingsService,
-		promptBuilder,
-		providerFactory,
-		loggerService
-	);
+		const pullRequestService = new PullRequestService(
+			gitService,
+			settingsService,
+			promptBuilder,
+			providerFactory,
+			loggerService
+		);
 
-	gitDiffPreviewProvider.register(context);
-	commitDetailsProvider.register(context);
-	commitExplainProvider.register(context);
-	repoInfoProvider.register(context);
-	pullRequestProvider.register(context);
-	historyPreviewProvider.register(context);
+		// Register Virtual Document Content Providers
+		gitDiffPreviewProvider.register(context);
+		commitDetailsProvider.register(context);
+		commitExplainProvider.register(context);
+		repoInfoProvider.register(context);
+		pullRequestProvider.register(context);
+		historyPreviewProvider.register(context);
 
-	// Core Git & AI commands
-	registerHelloCommand(context);
-	registerCheckGitRepositoryCommand(context, gitService);
-	registerPreviewGitDiffCommand(context, gitService, gitDiffPreviewProvider);
-	registerGenerateCommitMessageCommand(context, commitMessageService, loggerService);
+		// Core Git & AI commands
+		registerHelloCommand(context);
+		registerCheckGitRepositoryCommand(context, gitService);
+		registerPreviewGitDiffCommand(context, gitService, gitDiffPreviewProvider);
+		registerGenerateCommitMessageCommand(context, commitMessageService, loggerService);
 
-	// History & Explanation commands
-	registerViewCommitHistoryCommand(context, gitService, commitDetailsProvider, loggerService);
-	registerExplainCommitCommand(context, gitService, commitMessageService, commitExplainProvider, loggerService);
-	registerCopyCommitHashCommand(context, gitService, loggerService);
+		// History & Explanation commands
+		registerViewCommitHistoryCommand(context, gitService, commitDetailsProvider, loggerService);
+		registerExplainCommitCommand(context, gitService, commitMessageService, commitExplainProvider, loggerService);
+		registerCopyCommitHashCommand(context, gitService, loggerService);
 
-	// GitHub Integration commands
-	registerPushCommand(context, gitService, loggerService);
-	registerPullCommand(context, gitService, loggerService);
-	registerFetchCommand(context, gitService, loggerService);
-	registerCurrentBranchCommand(context, gitService, loggerService);
-	registerRepositoryInfoCommand(context, gitService, repoInfoProvider, loggerService);
-	registerOpenRepositoryCommand(context, gitService, loggerService);
-	registerOpenBranchCommand(context, gitService, loggerService);
+		// GitHub Integration commands
+		registerPushCommand(context, gitService, loggerService);
+		registerPullCommand(context, gitService, loggerService);
+		registerFetchCommand(context, gitService, loggerService);
+		registerCurrentBranchCommand(context, gitService, loggerService);
+		registerRepositoryInfoCommand(context, gitService, repoInfoProvider, loggerService);
+		registerOpenRepositoryCommand(context, gitService, loggerService);
+		registerOpenBranchCommand(context, gitService, loggerService);
 
-	// Pull Request Helper commands
-	registerGeneratePullRequestCommand(context, pullRequestService, pullRequestProvider, loggerService);
-	registerCopyPRTitleCommand(context, loggerService);
-	registerCopyPRDescriptionCommand(context, loggerService);
-	registerCopyEntirePRCommand(context, loggerService);
-	registerSavePullRequestCommand(context, loggerService);
-	registerOpenPullRequestPageCommand(context, gitService, loggerService);
+		// Pull Request Helper commands
+		registerGeneratePullRequestCommand(context, pullRequestService, pullRequestProvider, loggerService);
+		registerCopyPRTitleCommand(context, loggerService);
+		registerCopyPRDescriptionCommand(context, loggerService);
+		registerCopyEntirePRCommand(context, loggerService);
+		registerSavePullRequestCommand(context, loggerService);
+		registerOpenPullRequestPageCommand(context, gitService, loggerService);
 
-	// Commit History Analytics commands
-	registerSearchCommitHistoryCommand(context, historyService, historyPreviewProvider, loggerService);
-	registerCommitStatisticsCommand(context, historyService, historyPreviewProvider, loggerService);
-	registerTopContributorsCommand(context, historyService, historyPreviewProvider, loggerService);
-	registerCommitActivityCommand(context, historyService, historyPreviewProvider, loggerService);
-	registerExportHistoryReportCommand(context, historyService, loggerService);
+		// Commit History Analytics commands
+		registerSearchCommitHistoryCommand(context, historyService, historyPreviewProvider, loggerService);
+		registerCommitStatisticsCommand(context, historyService, historyPreviewProvider, loggerService);
+		registerTopContributorsCommand(context, historyService, historyPreviewProvider, loggerService);
+		registerCommitActivityCommand(context, historyService, historyPreviewProvider, loggerService);
+		registerExportHistoryReportCommand(context, historyService, loggerService);
 
-	// Settings & Configuration commands
-	registerSetApiKeyCommand(context, settingsService, loggerService);
-	registerUpdateApiKeyCommand(context, settingsService, loggerService);
-	registerRemoveApiKeyCommand(context, settingsService, loggerService);
-	registerSelectModelCommand(context, settingsService, loggerService);
+		// Settings & Configuration commands
+		registerSetApiKeyCommand(context, settingsService, loggerService);
+		registerUpdateApiKeyCommand(context, settingsService, loggerService);
+		registerRemoveApiKeyCommand(context, settingsService, loggerService);
+		registerSelectModelCommand(context, settingsService, loggerService);
 
-	loggerService.info('GitIQ extension activated successfully 🚀');
+		loggerService.info('GitIQ extension activated successfully 🚀');
+	} catch (error: unknown) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.error(`[GitIQ] Extension activation error: ${message}`, error);
+	}
 }
 
 /**

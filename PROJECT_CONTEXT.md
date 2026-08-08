@@ -191,38 +191,12 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 
 ## 6. Current Status & Changelog
 
-### Current Status: Marketplace Ready Rebranding to GitIQ (`v1.0.0`)
-- [x] Complete TypeScript structure & strict compiler setup.
-- [x] Extension activation lifecycle & command registration in `extension.ts`.
-- [x] Dedicated Output Channel logging via `LoggerService` ("GitIQ").
-- [x] Startup configuration validation (`validateConfiguration`) in `SettingsService`.
-- [x] Marketplace README shields badges (Version, VS Code 1.95+, MIT License, TypeScript 5.x).
-- [x] Secret Storage API key management (`setApiKey`, `updateApiKey`, `removeApiKey`) using `vscode.SecretStorage` (`gitiq.groqApiKey`).
-- [x] Automatic one-click migration of legacy API keys from `settings.json` or legacy secret storage (`commitpilot.groqApiKey`).
-- [x] Groq Model Selector (`selectModelCommand`) with QuickPick for supported models.
-- [x] Git commit history retrieval (`getCommitHistory`) and commit detail inspection (`getCommitDetails`).
-- [x] Interactive commit history QuickPick search (`viewCommitHistoryCommand`).
-- [x] Virtual read-only commit details document provider (`CommitDetailsProvider`).
-- [x] Plain English AI Commit Explanation workflow (`explainCommitCommand` & `CommitExplainProvider`).
-- [x] Clipboard commit hash copying (`copyCommitHashCommand`).
-- [x] Single-read Git diff workflow (`getStagedDiff`) with pathspec exclusions (`EXCLUDE_PATHSPECS`).
-- [x] Large diff context protection (`MAX_DIFF_CHARACTERS = 70000`) in `PromptBuilder`.
-- [x] Transient failure auto-retry logic in `GroqProvider`.
-- [x] Robust AI response sanitization (`CommitMessageValidator.sanitize`) and validation.
-- [x] Git commit execution (`GitService.commit`) on user Enter confirmation.
-- [x] Git push (`push`), pull (`pull`), and fetch (`fetch`) with progress notifications.
-- [x] Current branch display (`getCurrentBranch`) including detached HEAD detection.
-- [x] Repository information summary document (`getRepositoryInfo` & `RepoInfoProvider`).
-- [x] GitHub browser navigation: Open Repository and Open Current Branch.
-- [x] AI Pull Request generation with structured prompt, conventional commit prefix enforcement, multi-paragraph description, 2048 token budget, and 1-attempt retry.
-- [x] Copy PR Title, Copy PR Description, Copy Entire PR clipboard commands.
-- [x] Save Pull Request as `pull-request.md` to project root.
-- [x] Open GitHub compare page for PR creation.
-- [x] Offline Git commit search (`searchCommitHistoryCommand`).
-- [x] Offline commit statistics (`commitStatisticsCommand`).
-- [x] Offline top contributors ranking (`topContributorsCommand`).
-- [x] Offline 7-day commit activity table (`commitActivityCommand`).
-- [x] Offline report exporter (`exportHistoryReportCommand`).
+### Current Status: Marketplace Production Release (`v1.0.1`)
+- [x] Fixed root cause of `command 'gitIQ.checkGitRepository' not found` by removing `node_modules/**` from `.vscodeignore` so `groq-sdk` is bundled into the VSIX.
+- [x] Audited and verified all 29 commands in `package.json`, `activationEvents`, `src/utils/constants.ts`, and `src/commands/*.ts`.
+- [x] Made `activate()` in `src/extension.ts` fault-tolerant so non-blocking async checks cannot interrupt command registration.
+- [x] Cleaned up command titles in `package.json` to prevent duplicate `GitIQ: GitIQ:` category prefixes in Command Palette.
+- [x] Incremented extension version to `1.0.1` and generated production package `gitiq-1.0.1.vsix`.
 - [x] Code quality verification (`npm run check`) passing with zero errors or warnings.
 
 ---

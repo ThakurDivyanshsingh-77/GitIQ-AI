@@ -2,7 +2,7 @@
   "name": "gitiq",
   "displayName": "GitIQ",
   "description": "AI-Powered Git Assistant for Visual Studio Code",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "gitiq",
   "icon": "icon.png",
   "license": "MIT",
@@ -76,147 +76,147 @@
     "commands": [
       {
         "command": "gitIQ.hello",
-        "title": "GitIQ: Hello",
+        "title": "Hello",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.checkGitRepository",
-        "title": "GitIQ: Check Git Repository",
+        "title": "Check Git Repository",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.previewGitDiff",
-        "title": "GitIQ: Preview Git Diff",
+        "title": "Preview Git Diff",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.generateCommitMessage",
-        "title": "GitIQ: Generate Commit Message",
+        "title": "Generate Commit Message",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.viewCommitHistory",
-        "title": "GitIQ: View Commit History",
+        "title": "View Commit History",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.explainCommit",
-        "title": "GitIQ: Explain Commit",
+        "title": "Explain Commit",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.copyCommitHash",
-        "title": "GitIQ: Copy Commit Hash",
+        "title": "Copy Commit Hash",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.push",
-        "title": "GitIQ: Push Branch",
+        "title": "Push Branch",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.pull",
-        "title": "GitIQ: Pull Branch",
+        "title": "Pull Branch",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.fetch",
-        "title": "GitIQ: Fetch Updates",
+        "title": "Fetch Updates",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.currentBranch",
-        "title": "GitIQ: Show Current Branch",
+        "title": "Show Current Branch",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.repositoryInfo",
-        "title": "GitIQ: Repository Information",
+        "title": "Repository Information",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.openRepository",
-        "title": "GitIQ: Open GitHub Repository",
+        "title": "Open GitHub Repository",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.openBranch",
-        "title": "GitIQ: Open Current Branch on GitHub",
+        "title": "Open Current Branch on GitHub",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.generatePullRequest",
-        "title": "GitIQ: Generate Pull Request",
+        "title": "Generate Pull Request",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.copyPRTitle",
-        "title": "GitIQ: Copy PR Title",
+        "title": "Copy PR Title",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.copyPRDescription",
-        "title": "GitIQ: Copy PR Description",
+        "title": "Copy PR Description",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.copyEntirePullRequest",
-        "title": "GitIQ: Copy Entire Pull Request",
+        "title": "Copy Entire Pull Request",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.savePullRequest",
-        "title": "GitIQ: Save Pull Request",
+        "title": "Save Pull Request",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.openPullRequestPage",
-        "title": "GitIQ: Open Pull Request Page",
+        "title": "Open Pull Request Page",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.searchCommitHistory",
-        "title": "GitIQ: Search Commit History",
+        "title": "Search Commit History",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.commitStatistics",
-        "title": "GitIQ: Commit Statistics",
+        "title": "Commit Statistics",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.topContributors",
-        "title": "GitIQ: Top Contributors",
+        "title": "Top Contributors",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.commitActivity",
-        "title": "GitIQ: Commit Activity",
+        "title": "Commit Activity",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.exportHistoryReport",
-        "title": "GitIQ: Export History Report",
+        "title": "Export History Report",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.setApiKey",
-        "title": "GitIQ: Set Groq API Key",
+        "title": "Set Groq API Key",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.updateApiKey",
-        "title": "GitIQ: Update Groq API Key",
+        "title": "Update Groq API Key",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.removeApiKey",
-        "title": "GitIQ: Remove Groq API Key",
+        "title": "Remove Groq API Key",
         "category": "GitIQ"
       },
       {
         "command": "gitIQ.selectModel",
-        "title": "GitIQ: Select Groq Model",
+        "title": "Select Groq Model",
         "category": "GitIQ"
       }
     ],
