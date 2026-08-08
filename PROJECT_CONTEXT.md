@@ -239,3 +239,4 @@ npm run check
 3. In the new window, open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
 4. Set Groq API key via `GitIQ: Set Groq API Key`.
 5. Run any of the contributed `GitIQ: ...` commands.
+   hiiiii
