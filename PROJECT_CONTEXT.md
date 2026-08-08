@@ -126,7 +126,7 @@ gitiq/
 ```
 
 ---
-
+,
 ## 4. Database Schemas
 
 *(Not applicable - Stateless Extension)*
