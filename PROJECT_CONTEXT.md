@@ -191,12 +191,12 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 
 ## 6. Current Status & Changelog
 
-### Current Status: Marketplace Production Release (`v1.0.1`)
-- [x] Fixed root cause of `command 'gitIQ.checkGitRepository' not found` by removing `node_modules/**` from `.vscodeignore` so `groq-sdk` is bundled into the VSIX.
+### Current Status: Marketplace Production Release (`v1.0.2`)
+- [x] Implemented `esbuild` bundling pipeline (`npm run package`), bundling `groq-sdk` and all extension modules into a single self-contained `out/extension.js`.
+- [x] Excluded `node_modules/`, `src/`, and `.vscode/` from VSIX via `.vscodeignore` to eliminate all runtime module resolution failures.
 - [x] Audited and verified all 29 commands in `package.json`, `activationEvents`, `src/utils/constants.ts`, and `src/commands/*.ts`.
-- [x] Made `activate()` in `src/extension.ts` fault-tolerant so non-blocking async checks cannot interrupt command registration.
-- [x] Cleaned up command titles in `package.json` to prevent duplicate `GitIQ: GitIQ:` category prefixes in Command Palette.
-- [x] Incremented extension version to `1.0.1` and generated production package `gitiq-1.0.1.vsix`.
+- [x] Added console activation and command registration logging for Developer Tools diagnosis.
+- [x] Incremented extension version to `1.0.2` and generated standalone package `gitiq-1.0.2.vsix`.
 - [x] Code quality verification (`npm run check`) passing with zero errors or warnings.
 
 ---

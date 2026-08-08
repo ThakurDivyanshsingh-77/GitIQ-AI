@@ -10,6 +10,7 @@ export function registerCheckGitRepositoryCommand(
 	context: vscode.ExtensionContext,
 	gitService: GitService
 ): void {
+	console.log(`[GitIQ] Registering command: ${COMMAND_IDS.checkGitRepository}`);
 	const checkGitRepositoryCommand = vscode.commands.registerCommand(
 		COMMAND_IDS.checkGitRepository,
 		async (): Promise<void> => {

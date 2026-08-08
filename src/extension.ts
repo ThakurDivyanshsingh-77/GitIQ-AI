@@ -51,11 +51,13 @@ let loggerService: LoggerService | undefined;
  * Handles service composition, configuration validation, and output logging.
  */
 export function activate(context: vscode.ExtensionContext): void {
+	console.log('[GitIQ] Extension activate() started');
 	try {
 		loggerService = new LoggerService();
 		context.subscriptions.push(loggerService);
 
 		loggerService.info('Activating GitIQ extension...');
+		console.log('[GitIQ] LoggerService initialized');
 
 		const settingsService = new SettingsService(context.secrets, loggerService);
 
@@ -104,6 +106,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		pullRequestProvider.register(context);
 		historyPreviewProvider.register(context);
 
+		console.log('[GitIQ] Registering extension commands...');
+
 		// Core Git & AI commands
 		registerHelloCommand(context);
 		registerCheckGitRepositoryCommand(context, gitService);
@@ -145,6 +149,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		registerRemoveApiKeyCommand(context, settingsService, loggerService);
 		registerSelectModelCommand(context, settingsService, loggerService);
 
+		console.log('[GitIQ] All 29 commands registered successfully');
 		loggerService.info('GitIQ extension activated successfully 🚀');
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : String(error);
