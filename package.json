@@ -3,7 +3,7 @@
   "displayName": "GitIQ",
   "description": "AI-Powered Git Assistant for Visual Studio Code",
   "version": "1.0.0",
-  "publisher": "ThakurDivyanshsingh",
+  "publisher": "gitiq",
   "icon": "icon.png",
   "license": "MIT",
   "engines": {
