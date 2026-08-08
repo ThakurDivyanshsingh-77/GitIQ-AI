@@ -29,7 +29,7 @@ In addition to AI capabilities, GitIQ features a suite of **offline Git tools**â
 
 ## ðŸŽ¥ Demo
 
-<div align="center">
+<div align="center"> ..
 
 ![GitIQ Demo Placeholder](images/demo.gif)
 
