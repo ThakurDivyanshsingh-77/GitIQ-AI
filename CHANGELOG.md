@@ -11,8 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Sidebar UX & Navigation Refactor (`SidebarTreeDataProvider`)**:
   - **Compact Header & Live Status**: High-density branded header (`GitIQ` - `AI Git Assistant`) and repository summary (`repo` • `branch`) without intrusive auto-opened documents.
   - **Primary Actions (Always Accessible)**: *AI Commit*, *Create PR*, and *Commit History* immediately visible without scrolling.
-  - **Default-Collapsed Secondary Navigation**: All secondary tool sections (*Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, *AI Settings*) are collapsed by default on first launch.
-  - **State Persistence via Stable IDs**: Every node has a stable identifier, allowing VS Code's native TreeView engine to preserve the user's expand/collapse choices across data updates and refreshes.
+  - **Default-Collapsed Secondary Navigation**: Enforced `vscode.TreeItemCollapsibleState.Collapsed` on all secondary tool sections (*Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, *AI Settings*).
+  - **Expansion State Tracking**: Connected `vscode.window.createTreeView` with `onDidExpandElement` and `onDidCollapseElement` listeners and in-provider state tracking (`setExpanded`), guaranteeing user expansions are preserved across refreshes without unwanted re-expansion or forced collapse.
+  - **Native Collapse All**: Enabled `showCollapseAll: true` in `createTreeView` for instant 1-click collapse of all open groups.
   - **Short, Clean Labels & Tooltips**: Removed visual noise and wide inline descriptions in favor of concise labels (`AI Commit`, `Create PR`, `Commit History`, `Repository Info`, `Search Commits`, `Export Report`) with comprehensive hover tooltips.
   - **Enhanced Build Pipeline**: `npm run compile` automatically invokes `esbuild` bundling to guarantee complete, self-contained output in development and launch hosts.
 

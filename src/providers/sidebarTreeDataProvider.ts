@@ -5,7 +5,6 @@ import { COMMAND_IDS } from '../utils/constants';
 
 /**
  * Tree item representing a header, category, or actionable command in the GitIQ sidebar.
- * Includes stable IDs so VS Code reliably persists user expansion/collapse state.
  */
 export class GitIQTreeItem extends vscode.TreeItem {
 	public children?: GitIQTreeItem[];
@@ -62,8 +61,9 @@ export class GitIQTreeItem extends vscode.TreeItem {
 
 /**
  * Native VS Code TreeDataProvider powering the GitIQ Activity Bar sidebar dashboard.
- * Compact by default: only Primary Actions are expanded initially.
- * All secondary categories are collapsed by default and their expansion state is persisted via stable IDs.
+ * - Initial view is strictly compact: only Header, Repo Status, and Quick Actions are visible.
+ * - All secondary categories (Git & GitHub, Pull Requests, Commit Analytics, AI Tools, AI Settings) are COLLAPSED by default.
+ * - In-memory and TreeView expansion tracking ensures user expansions are preserved across refreshes without forced re-collapsing.
  */
 export class SidebarTreeDataProvider
 	implements vscode.TreeDataProvider<GitIQTreeItem>, vscode.Disposable
@@ -76,10 +76,41 @@ export class SidebarTreeDataProvider
 		GitIQTreeItem | undefined | null | void
 	> = this._onDidChangeTreeData.event;
 
+	/**
+	 * Tracks user-toggled expansion state by node ID.
+	 * When a user expands or collapses a section, the state is recorded here and preserved across refresh() calls.
+	 */
+	private readonly userExpansionState: Map<string, vscode.TreeItemCollapsibleState> =
+		new Map<string, vscode.TreeItemCollapsibleState>();
+
 	public constructor(
 		private readonly gitService?: GitService,
 		private readonly extensionUri?: vscode.Uri
 	) {}
+
+	/**
+	 * Records a user expansion or collapse action from TreeView event listeners.
+	 */
+	public setExpanded(id: string | undefined, isExpanded: boolean): void {
+		if (id) {
+			this.userExpansionState.set(
+				id,
+				isExpanded
+					? vscode.TreeItemCollapsibleState.Expanded
+					: vscode.TreeItemCollapsibleState.Collapsed
+			);
+		}
+	}
+
+	/**
+	 * Returns the user's previously chosen state if one exists, otherwise falls back to the default state.
+	 */
+	private getCollapsibleState(
+		id: string,
+		defaultState: vscode.TreeItemCollapsibleState
+	): vscode.TreeItemCollapsibleState {
+		return this.userExpansionState.get(id) ?? defaultState;
+	}
 
 	/**
 	 * Manually triggers a refresh of the sidebar tree.
@@ -97,20 +128,20 @@ export class SidebarTreeDataProvider
 			return element.children ?? [];
 		}
 
-		const items: GitIQTreeItem[] = [];
+		const rootItems: GitIQTreeItem[] = [];
 
-		// 1. Compact Branded Header
-		items.push(this.createHeaderItem());
+		// 1. Compact Header (Non-collapsible)
+		rootItems.push(this.createHeaderItem());
 
-		// 2. Compact Repository Summary
+		// 2. Compact Repository Summary (Non-collapsible)
 		const repoStatusItem = await this.getRepositoryStatusItem();
-		items.push(repoStatusItem);
+		rootItems.push(repoStatusItem);
 
-		// 3. Quick Actions (Expanded by default, top 3 workflows)
-		items.push(this.createQuickActionsCategory());
+		// 3. Quick Actions (Expanded by default for immediate 1-click access)
+		rootItems.push(this.createQuickActionsCategory());
 
-		// 4. Secondary Sections (All COLLAPSED by default)
-		items.push(
+		// 4. Secondary Sections (All COLLAPSED by default on fresh open)
+		rootItems.push(
 			this.createGitGitHubCategory(),
 			this.createPullRequestsCategory(),
 			this.createCommitAnalyticsCategory(),
@@ -118,7 +149,7 @@ export class SidebarTreeDataProvider
 			this.createAISettingsCategory()
 		);
 
-		return items;
+		return rootItems;
 	}
 
 	/**
@@ -134,7 +165,7 @@ export class SidebarTreeDataProvider
 			description: 'AI Git Assistant',
 			iconUri,
 			iconName: iconUri ? undefined : 'hubot',
-			tooltip: 'GitIQ — AI Git Assistant for Visual Studio Code\nClick to view repository info.',
+			tooltip: 'GitIQ — AI Git Assistant for Visual Studio Code\nClick to view repository overview.',
 			commandId: COMMAND_IDS.repositoryInfo,
 			commandTitle: 'Repository Information'
 		});
@@ -222,23 +253,26 @@ export class SidebarTreeDataProvider
 	 * Primary actions section — immediately accessible without scrolling.
 	 */
 	private createQuickActionsCategory(): GitIQTreeItem {
+		const id = 'gitiq.nav.quickActions';
+		const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Expanded);
+
 		const children: GitIQTreeItem[] = [
 			new GitIQTreeItem('AI Commit', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.qa.aiCommit',
+				id: 'gitiq.act.aiCommit',
 				commandId: COMMAND_IDS.generateCommitMessage,
 				commandTitle: 'Generate Commit Message',
 				iconName: 'sparkle',
 				tooltip: 'Analyze staged changes and generate a Conventional Commit message with AI.'
 			}),
 			new GitIQTreeItem('Create PR', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.qa.createPr',
+				id: 'gitiq.act.createPr',
 				commandId: COMMAND_IDS.generatePullRequest,
 				commandTitle: 'Generate Pull Request',
 				iconName: 'git-pull-request',
 				tooltip: 'Generate complete pull request title, description, and checklist with AI.'
 			}),
 			new GitIQTreeItem('Commit History', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.qa.commitHistory',
+				id: 'gitiq.act.commitHistory',
 				commandId: COMMAND_IDS.viewCommitHistory,
 				commandTitle: 'View Commit History',
 				iconName: 'history',
@@ -246,8 +280,8 @@ export class SidebarTreeDataProvider
 			})
 		];
 
-		return new GitIQTreeItem('Quick Actions', vscode.TreeItemCollapsibleState.Expanded, {
-			id: 'gitiq.group.quickActions',
+		return new GitIQTreeItem('Quick Actions', state, {
+			id,
 			iconName: 'zap',
 			tooltip: 'Primary GitIQ workflows.',
 			children
@@ -258,51 +292,54 @@ export class SidebarTreeDataProvider
 	 * Git & GitHub section — COLLAPSED by default.
 	 */
 	private createGitGitHubCategory(): GitIQTreeItem {
+		const id = 'gitiq.nav.gitGitHub';
+		const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Collapsed);
+
 		const children: GitIQTreeItem[] = [
 			new GitIQTreeItem('Current Branch', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.git.currentBranch',
+				id: 'gitiq.act.currentBranch',
 				commandId: COMMAND_IDS.currentBranch,
 				commandTitle: 'Show Current Branch',
 				iconName: 'git-branch',
 				tooltip: 'Display the active Git branch name in the status notification.'
 			}),
 			new GitIQTreeItem('Repository Info', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.git.repoInfo',
+				id: 'gitiq.act.repoInfo',
 				commandId: COMMAND_IDS.repositoryInfo,
 				commandTitle: 'Repository Information',
 				iconName: 'info',
 				tooltip: 'View an overview of repository branch, remote URL, commit count, and status.'
 			}),
 			new GitIQTreeItem('Push', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.git.push',
+				id: 'gitiq.act.push',
 				commandId: COMMAND_IDS.push,
 				commandTitle: 'Push Branch',
 				iconName: 'repo-push',
 				tooltip: 'Push current branch commits to the remote origin.'
 			}),
 			new GitIQTreeItem('Pull', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.git.pull',
+				id: 'gitiq.act.pull',
 				commandId: COMMAND_IDS.pull,
 				commandTitle: 'Pull Branch',
 				iconName: 'repo-pull',
 				tooltip: 'Pull incoming updates from the remote tracking branch.'
 			}),
 			new GitIQTreeItem('Fetch', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.git.fetch',
+				id: 'gitiq.act.fetch',
 				commandId: COMMAND_IDS.fetch,
 				commandTitle: 'Fetch Updates',
 				iconName: 'repo-sync',
 				tooltip: 'Fetch branches and tags from remote origin without merging.'
 			}),
 			new GitIQTreeItem('Open on GitHub', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.git.openRepo',
+				id: 'gitiq.act.openRepo',
 				commandId: COMMAND_IDS.openRepository,
 				commandTitle: 'Open GitHub Repository',
 				iconName: 'github-inverted',
 				tooltip: 'Open the remote GitHub repository in your default web browser.'
 			}),
 			new GitIQTreeItem('Open Branch on GitHub', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.git.openBranch',
+				id: 'gitiq.act.openBranch',
 				commandId: COMMAND_IDS.openBranch,
 				commandTitle: 'Open Current Branch on GitHub',
 				iconName: 'globe',
@@ -310,8 +347,8 @@ export class SidebarTreeDataProvider
 			})
 		];
 
-		return new GitIQTreeItem('Git & GitHub', vscode.TreeItemCollapsibleState.Collapsed, {
-			id: 'gitiq.group.gitGitHub',
+		return new GitIQTreeItem('Git & GitHub', state, {
+			id,
 			iconName: 'source-control',
 			tooltip: 'Branch, remote, push, pull, fetch, and GitHub navigation actions.',
 			children
@@ -322,44 +359,47 @@ export class SidebarTreeDataProvider
 	 * Pull Requests section — COLLAPSED by default.
 	 */
 	private createPullRequestsCategory(): GitIQTreeItem {
+		const id = 'gitiq.nav.pullRequests';
+		const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Collapsed);
+
 		const children: GitIQTreeItem[] = [
 			new GitIQTreeItem('Create PR', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.pr.generatePr',
+				id: 'gitiq.act.prGenerate',
 				commandId: COMMAND_IDS.generatePullRequest,
 				commandTitle: 'Generate Pull Request',
 				iconName: 'git-pull-request',
 				tooltip: 'Generate complete pull request title, summary, description, and checklist with AI.'
 			}),
 			new GitIQTreeItem('Open PR Page', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.pr.openPage',
+				id: 'gitiq.act.prOpenPage',
 				commandId: COMMAND_IDS.openPullRequestPage,
 				commandTitle: 'Open Pull Request Page',
 				iconName: 'link-external',
 				tooltip: 'Open the GitHub compare and pull request creation page in your browser.'
 			}),
 			new GitIQTreeItem('Copy PR Title', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.pr.copyTitle',
+				id: 'gitiq.act.prCopyTitle',
 				commandId: COMMAND_IDS.copyPRTitle,
 				commandTitle: 'Copy PR Title',
 				iconName: 'copy',
 				tooltip: 'Copy the generated PR title to your clipboard.'
 			}),
 			new GitIQTreeItem('Copy PR Description', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.pr.copyDesc',
+				id: 'gitiq.act.prCopyDesc',
 				commandId: COMMAND_IDS.copyPRDescription,
 				commandTitle: 'Copy PR Description',
 				iconName: 'clippy',
 				tooltip: 'Copy the generated PR description markdown to your clipboard.'
 			}),
 			new GitIQTreeItem('Copy Entire PR', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.pr.copyEntire',
+				id: 'gitiq.act.prCopyEntire',
 				commandId: COMMAND_IDS.copyEntirePullRequest,
 				commandTitle: 'Copy Entire Pull Request',
 				iconName: 'files',
 				tooltip: 'Copy the entire generated pull request document to your clipboard.'
 			}),
 			new GitIQTreeItem('Save PR', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.pr.save',
+				id: 'gitiq.act.prSave',
 				commandId: COMMAND_IDS.savePullRequest,
 				commandTitle: 'Save Pull Request',
 				iconName: 'save',
@@ -367,8 +407,8 @@ export class SidebarTreeDataProvider
 			})
 		];
 
-		return new GitIQTreeItem('Pull Requests', vscode.TreeItemCollapsibleState.Collapsed, {
-			id: 'gitiq.group.pullRequests',
+		return new GitIQTreeItem('Pull Requests', state, {
+			id,
 			iconName: 'git-pull-request',
 			tooltip: 'Create, review, copy, and export GitHub pull requests.',
 			children
@@ -379,37 +419,40 @@ export class SidebarTreeDataProvider
 	 * Commit Analytics section — COLLAPSED by default.
 	 */
 	private createCommitAnalyticsCategory(): GitIQTreeItem {
+		const id = 'gitiq.nav.commitAnalytics';
+		const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Collapsed);
+
 		const children: GitIQTreeItem[] = [
 			new GitIQTreeItem('Search Commits', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.analytics.search',
+				id: 'gitiq.act.analyticsSearch',
 				commandId: COMMAND_IDS.searchCommitHistory,
 				commandTitle: 'Search Commit History',
 				iconName: 'search',
 				tooltip: 'Search commit history offline by commit message, author, or keyword.'
 			}),
 			new GitIQTreeItem('Commit Statistics', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.analytics.stats',
+				id: 'gitiq.act.analyticsStats',
 				commandId: COMMAND_IDS.commitStatistics,
 				commandTitle: 'Commit Statistics',
 				iconName: 'graph',
 				tooltip: 'View summary statistics: total commits, contributors, and active branches.'
 			}),
 			new GitIQTreeItem('Top Contributors', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.analytics.contributors',
+				id: 'gitiq.act.analyticsContributors',
 				commandId: COMMAND_IDS.topContributors,
 				commandTitle: 'Top Contributors',
 				iconName: 'organization',
 				tooltip: 'View ranked list of top repository contributors and commit counts.'
 			}),
 			new GitIQTreeItem('Commit Activity', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.analytics.activity',
+				id: 'gitiq.act.analyticsActivity',
 				commandId: COMMAND_IDS.commitActivity,
 				commandTitle: 'Commit Activity',
 				iconName: 'pulse',
 				tooltip: 'View 7-day commit activity frequency table.'
 			}),
 			new GitIQTreeItem('Export Report', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.analytics.export',
+				id: 'gitiq.act.analyticsExport',
 				commandId: COMMAND_IDS.exportHistoryReport,
 				commandTitle: 'Export History Report',
 				iconName: 'file-text',
@@ -417,8 +460,8 @@ export class SidebarTreeDataProvider
 			})
 		];
 
-		return new GitIQTreeItem('Commit Analytics', vscode.TreeItemCollapsibleState.Collapsed, {
-			id: 'gitiq.group.commitAnalytics',
+		return new GitIQTreeItem('Commit Analytics', state, {
+			id,
 			iconName: 'graph',
 			tooltip: 'Offline commit analytics, searches, contributor insights, and reports.',
 			children
@@ -429,16 +472,19 @@ export class SidebarTreeDataProvider
 	 * AI Tools section — COLLAPSED by default.
 	 */
 	private createAIToolsCategory(): GitIQTreeItem {
+		const id = 'gitiq.nav.aiTools';
+		const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Collapsed);
+
 		const children: GitIQTreeItem[] = [
 			new GitIQTreeItem('Preview Staged Diff', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.ai.previewDiff',
+				id: 'gitiq.act.aiDiff',
 				commandId: COMMAND_IDS.previewGitDiff,
 				commandTitle: 'Preview Git Diff',
 				iconName: 'diff',
 				tooltip: 'Preview clean, filtered staged Git diff changes before committing.'
 			}),
 			new GitIQTreeItem('Explain Commit', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.ai.explainCommit',
+				id: 'gitiq.act.aiExplain',
 				commandId: COMMAND_IDS.explainCommit,
 				commandTitle: 'Explain Commit',
 				iconName: 'comment-discussion',
@@ -446,8 +492,8 @@ export class SidebarTreeDataProvider
 			})
 		];
 
-		return new GitIQTreeItem('AI Tools', vscode.TreeItemCollapsibleState.Collapsed, {
-			id: 'gitiq.group.aiTools',
+		return new GitIQTreeItem('AI Tools', state, {
+			id,
 			iconName: 'sparkle',
 			tooltip: 'Secondary AI utilities including diff previews and commit explanations.',
 			children
@@ -458,30 +504,33 @@ export class SidebarTreeDataProvider
 	 * AI Settings section — COLLAPSED by default.
 	 */
 	private createAISettingsCategory(): GitIQTreeItem {
+		const id = 'gitiq.nav.aiSettings';
+		const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Collapsed);
+
 		const children: GitIQTreeItem[] = [
 			new GitIQTreeItem('Set API Key', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.settings.setKey',
+				id: 'gitiq.act.setApiKey',
 				commandId: COMMAND_IDS.setApiKey,
 				commandTitle: 'Set Groq API Key',
 				iconName: 'key',
 				tooltip: 'Configure Groq API key securely in VS Code SecretStorage.'
 			}),
 			new GitIQTreeItem('Update API Key', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.settings.updateKey',
+				id: 'gitiq.act.updateApiKey',
 				commandId: COMMAND_IDS.updateApiKey,
 				commandTitle: 'Update Groq API Key',
 				iconName: 'edit',
 				tooltip: 'Update existing Groq API key stored in VS Code SecretStorage.'
 			}),
 			new GitIQTreeItem('Remove API Key', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.settings.removeKey',
+				id: 'gitiq.act.removeApiKey',
 				commandId: COMMAND_IDS.removeApiKey,
 				commandTitle: 'Remove Groq API Key',
 				iconName: 'trash',
 				tooltip: 'Remove Groq API key from VS Code SecretStorage.'
 			}),
 			new GitIQTreeItem('Select AI Model', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.settings.selectModel',
+				id: 'gitiq.act.selectModel',
 				commandId: COMMAND_IDS.selectModel,
 				commandTitle: 'Select Groq Model',
 				iconName: 'gear',
@@ -489,8 +538,8 @@ export class SidebarTreeDataProvider
 			})
 		];
 
-		return new GitIQTreeItem('AI Settings', vscode.TreeItemCollapsibleState.Collapsed, {
-			id: 'gitiq.group.aiSettings',
+		return new GitIQTreeItem('AI Settings', state, {
+			id,
 			iconName: 'settings-gear',
 			tooltip: 'Secure API key management and AI model configuration.',
 			children
@@ -499,5 +548,6 @@ export class SidebarTreeDataProvider
 
 	public dispose(): void {
 		this._onDidChangeTreeData.dispose();
+		this.userExpansionState.clear();
 	}
 }

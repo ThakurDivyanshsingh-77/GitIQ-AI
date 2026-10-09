@@ -186,18 +186,18 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 
 ### Views & Containers (`package.json`)
 - **Activity Bar Container (`gitiq-sidebar`)**: Dedicated GitIQ icon (`resources/icon.svg`) on the VS Code Activity Bar.
-- **Sidebar View (`gitiq.sidebarView`)**: High-density TreeView backed by `SidebarTreeDataProvider` with refined visual hierarchy:
+- **Sidebar View (`gitiq.sidebarView`)**: High-density TreeView instantiated via `vscode.window.createTreeView` (`showCollapseAll: true`) backed by `SidebarTreeDataProvider` with refined visual hierarchy:
   - **Header Item**: Branded `GitIQ` logo and `AI Git Assistant` subtitle.
   - **Repository Status**: Real-time detection (`repo • branch`) with empty state guidance.
   - **Quick Actions (Expanded by default)**: Immediate 1-click access to primary workflows (*AI Commit*, *Create PR*, *Commit History*).
-  - **Organized Tool Sections (Collapsed by default, state persisted via stable IDs)**:
+  - **Organized Tool Sections (Collapsed by default on fresh open, state tracked across refreshes)**:
     - **Git & GitHub**: Current Branch, Repository Info, Push, Pull, Fetch, Open on GitHub, Open Branch on GitHub.
     - **Pull Requests**: Create PR, Open PR Page, Copy PR Title, Copy PR Description, Copy Entire PR, Save PR.
     - **Commit Analytics**: Search Commits, Commit Statistics, Top Contributors, Commit Activity, Export Report.
     - **AI Tools**: Preview Staged Diff, Explain Commit.
     - **AI Settings**: Set API Key, Update API Key, Remove API Key, Select AI Model.
 - **Views Welcome**: Native empty state view when no folder is open in VS Code.
-- **View Title Menus**: Instant shortcuts for settings (`gitIQ.setApiKey`, $(key)) and reload (`gitIQ.refreshSidebar`, $(refresh)).
+- **View Title Menus**: Instant shortcuts for settings (`gitIQ.setApiKey`, $(key)), reload (`gitIQ.refreshSidebar`, $(refresh)), and native collapse-all.
 
 ### Virtual Scheme Registration
 - **`gitiq-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
@@ -215,7 +215,7 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 - [x] **Activity Bar & Sidebar Redesign**: Implemented dedicated Activity Bar icon container (`resources/icon.svg`) and high-density, uncluttered `TreeView` dashboard (`SidebarTreeDataProvider`).
 - [x] **Compact by Default**: Header, repository summary, and 3 primary Quick Actions (*AI Commit*, *Create PR*, *Commit History*) immediately visible without scrolling.
 - [x] **Default-Collapsed Secondary Sections**: *Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, and *AI Settings* start collapsed by default.
-- [x] **Expansion State Persistence**: Stable node IDs assigned to all items so VS Code reliably remembers user expand/collapse states across reloads.
+- [x] **TreeView Event-Driven Expansion Tracking**: Wired `createTreeView` with `onDidExpandElement` and `onDidCollapseElement` to keep user choices intact on refresh without forced collapse or unwanted expansion.
 - [x] **Clean, Short Labels**: Stripped visual clutter and long inline descriptions in favor of short labels and detailed tooltips.
 - [x] **Integrated Build Pipeline**: `npm run compile` automatically runs `tsc -p ./ && npm run build` to keep bundled `out/extension.js` fresh for debugging and launch.
 - [x] Audited and verified all 31 commands in `package.json`, `activationEvents`, `src/utils/constants.ts`, and `src/commands/*.ts`.

@@ -153,9 +153,20 @@ export function activate(context: vscode.ExtensionContext): void {
 
 		// GitIQ Activity Bar Sidebar Tree View
 		const sidebarProvider = new SidebarTreeDataProvider(gitService, context.extensionUri);
+		const treeView = vscode.window.createTreeView('gitiq.sidebarView', {
+			treeDataProvider: sidebarProvider,
+			showCollapseAll: true
+		});
+
 		context.subscriptions.push(
 			sidebarProvider,
-			vscode.window.registerTreeDataProvider('gitiq.sidebarView', sidebarProvider),
+			treeView,
+			treeView.onDidExpandElement((event) => {
+				sidebarProvider.setExpanded(event.element.id, true);
+			}),
+			treeView.onDidCollapseElement((event) => {
+				sidebarProvider.setExpanded(event.element.id, false);
+			}),
 			vscode.commands.registerCommand(COMMAND_IDS.refreshSidebar, () => {
 				sidebarProvider.refresh();
 				loggerService?.info('GitIQ sidebar refreshed.');
