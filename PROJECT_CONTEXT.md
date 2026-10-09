@@ -196,7 +196,7 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 - [x] Excluded `node_modules/`, `src/`, and `.vscode/` from VSIX via `.vscodeignore` to eliminate all runtime module resolution failures.
 - [x] Audited and verified all 29 commands in `package.json`, `activationEvents`, `src/utils/constants.ts`, and `src/commands/*.ts`.
 - [x] Added console activation and command registration logging for Developer Tools diagnosis.
-- [x] Incremented extension version to `1.0.2` and generated standalone package `gitiq-1.0.2.vsix`.
+- [x] Created dedicated `detail.md` containing full extension documentation, installation guide, API settings, feature breakdown, workflow, command table, and sample AI outputs.
 - [x] Code quality verification (`npm run check`) passing with zero errors or warnings.
 
 ---
