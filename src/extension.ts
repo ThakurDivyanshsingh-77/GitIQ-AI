@@ -152,7 +152,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		registerSelectModelCommand(context, settingsService, loggerService);
 
 		// GitIQ Activity Bar Sidebar Tree View
-		const sidebarProvider = new SidebarTreeDataProvider(gitService);
+		const sidebarProvider = new SidebarTreeDataProvider(gitService, context.extensionUri);
 		context.subscriptions.push(
 			sidebarProvider,
 			vscode.window.registerTreeDataProvider('gitiq.sidebarView', sidebarProvider),

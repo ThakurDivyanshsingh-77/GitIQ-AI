@@ -186,13 +186,18 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 
 ### Views & Containers (`package.json`)
 - **Activity Bar Container (`gitiq-sidebar`)**: Dedicated GitIQ icon (`resources/icon.svg`) on the VS Code Activity Bar.
-- **Sidebar View (`gitiq.sidebarView`)**: TreeView backed by `SidebarTreeDataProvider` with organized categories:
-  - **AI Tools**: Commit message generation, diff preview, commit explain, code review (planned).
-  - **Pull Requests**: PR generation, PR page opening, title/description/full copying, markdown saving.
-  - **Git & GitHub**: Current branch, repo info, push, pull, fetch, repo/branch GitHub navigation.
-  - **Commit History**: History viewer, search, statistics, top contributors, activity, export report.
-  - **AI Settings**: Set, update, remove API keys and model selection.
-- **Views Welcome**: Native empty state view when no folder is open.
+- **Sidebar View (`gitiq.sidebarView`)**: High-density TreeView backed by `SidebarTreeDataProvider` with refined visual hierarchy:
+  - **Header Item**: Branded `GitIQ` logo and `AI Git Assistant` subtitle.
+  - **Repository Status**: Real-time detection (`repo • branch • Active`) with empty state guidance.
+  - **Quick Actions (Expanded)**: Immediate 1-click access to *AI Commit*, *Create PR*, and *Commit History*.
+  - **Organized Tool Sections (Collapsed by default)**:
+    - **Git & GitHub**: Current Branch, Repository Info, Push, Pull, Fetch, Open on GitHub, Open Branch.
+    - **Pull Requests**: Generate PR, Open PR Page, Copy PR Title/Description/Entire PR, Save PR.
+    - **Commit Analytics**: Search Commits, Commit Statistics, Top Contributors, 7-Day Activity, Export Report.
+    - **AI Settings**: Set, Update, Remove API Key, Select AI Model.
+    - **Additional AI Tools**: Preview Staged Diff, Explain Commit.
+- **Views Welcome**: Native empty state view when no folder is open in VS Code.
+- **View Title Menus**: Instant shortcuts for settings (`gitIQ.setApiKey`, $(key)) and reload (`gitIQ.refreshSidebar`, $(refresh)).
 
 ### Virtual Scheme Registration
 - **`gitiq-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
@@ -207,8 +212,9 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 ## 6. Current Status & Changelog
 
 ### Current Status: Marketplace Production Release (`v1.1.0`)
-- [x] **Activity Bar & Sidebar Dashboard**: Implemented dedicated Activity Bar icon container (`resources/icon.svg`) and native `TreeView` dashboard (`SidebarTreeDataProvider`).
-- [x] **Category Organization**: Structured all existing features into 5 intuitive sections (AI Tools, Pull Requests, Git & GitHub, Commit History, AI Settings).
+- [x] **Activity Bar & Sidebar Redesign**: Implemented dedicated Activity Bar icon container (`resources/icon.svg`) and high-density, uncluttered `TreeView` dashboard (`SidebarTreeDataProvider`).
+- [x] **Information Density & Hierarchy**: Compact branding header, live repository status, top-level Quick Actions, and 5 clean collapsed tool sections.
+- [x] **Narrow Sidebar Optimization**: Short, clear action labels, native theme-aware icons, and zero horizontal clipping.
 - [x] **Empty State Handling**: Graceful repository state detection with top-level warning item and empty workspace welcome view.
 - [x] **Implemented `esbuild` bundling pipeline (`npm run package`)**, bundling `groq-sdk` and all extension modules into a single self-contained `out/extension.js`.
 - [x] Excluded `node_modules/`, `src/`, and `.vscode/` from VSIX via `.vscodeignore` to eliminate all runtime module resolution failures.

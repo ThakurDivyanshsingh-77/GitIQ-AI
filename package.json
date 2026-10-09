@@ -205,7 +205,8 @@
       {
         "command": "gitIQ.setApiKey",
         "title": "Set Groq API Key",
-        "category": "GitIQ"
+        "category": "GitIQ",
+        "icon": "$(key)"
       },
       {
         "command": "gitIQ.updateApiKey",
@@ -263,9 +264,14 @@
     "menus": {
       "view/title": [
         {
+          "command": "gitIQ.setApiKey",
+          "when": "view == gitiq.sidebarView",
+          "group": "navigation@1"
+        },
+        {
           "command": "gitIQ.refreshSidebar",
           "when": "view == gitiq.sidebarView",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ]
     },

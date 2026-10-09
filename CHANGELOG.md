@@ -8,14 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 - **Dedicated Activity Bar Container**: Custom-designed GitIQ vector icon in the VS Code Activity Bar (`resources/icon.svg`).
-- **Sidebar Dashboard (`SidebarTreeDataProvider`)**: Native VS Code tree view organizing all extension capabilities into five clean, intuitive categories:
-  - **AI Tools**: Generate Commit Message, Preview Staged Diff, Explain Commit, AI Code Review (Planned).
-  - **Pull Requests**: Generate Pull Request, Open PR Page, Copy PR Title, Copy PR Description, Copy Entire PR, Save Pull Request.
-  - **Git & GitHub**: Show Current Branch, Repository Information, Push Branch, Pull Branch, Fetch Updates, Open GitHub Repository, Open Current Branch on GitHub.
-  - **Commit History**: View Commit History, Search Commit History, Commit Statistics, Top Contributors, Commit Activity, Export History Report.
-  - **AI Settings**: Set API Key, Update API Key, Remove API Key, Select AI Model.
-- **Empty State Handling**: Graceful repository state detection with helpful warning items and empty workspace views welcome.
-- **Dashboard Refresh & Title Action**: Dedicated title refresh command (`gitIQ.refreshSidebar`) with automatic workspace folder change tracking.
+- **Sidebar Dashboard Redesign (`SidebarTreeDataProvider`)**:
+  - **Compact Branded Header**: GitIQ product branding and subtitle (`AI Git Assistant`) with title bar settings (`gitIQ.setApiKey`) and refresh actions.
+  - **Live Repository Status**: Real-time detection showing repository name, active branch, and status (`repo • branch • Active`) with instant empty-state guidance when outside a Git repository.
+  - **Prioritized Quick Actions**: Top-level 1-click access to most frequent workflows: *AI Commit*, *Create PR*, and *Commit History*.
+  - **Concise Collapsed Categories**: Replaced long, cluttering lists with neatly collapsed sections:
+    - *Git & GitHub* (Current Branch, Repository Info, Push, Pull, Fetch, Open on GitHub, Open Branch)
+    - *Pull Requests* (Generate PR, Open PR Page, Copy PR Title/Description/Entire PR, Save PR)
+    - *Commit Analytics* (Search Commits, Commit Statistics, Top Contributors, 7-Day Activity, Export Report)
+    - *AI Settings* (Set, Update, Remove API Key, Select AI Model)
+    - *Additional AI Tools* (Preview Staged Diff, Explain Commit)
+- **High-Density & Narrow Layout Optimization**: Concise labels, theme-aware icons, and zero horizontal clipping on narrow sidebars.
 
 ---
 
