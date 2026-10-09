@@ -4,6 +4,19 @@ All notable changes to **GitIQ** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-09
+
+### Added
+- **Dedicated Activity Bar Container**: Custom-designed GitIQ vector icon in the VS Code Activity Bar (`resources/icon.svg`).
+- **Sidebar Dashboard (`SidebarTreeDataProvider`)**: Native VS Code tree view organizing all extension capabilities into five clean, intuitive categories:
+  - **AI Tools**: Generate Commit Message, Preview Staged Diff, Explain Commit, AI Code Review (Planned).
+  - **Pull Requests**: Generate Pull Request, Open PR Page, Copy PR Title, Copy PR Description, Copy Entire PR, Save Pull Request.
+  - **Git & GitHub**: Show Current Branch, Repository Information, Push Branch, Pull Branch, Fetch Updates, Open GitHub Repository, Open Current Branch on GitHub.
+  - **Commit History**: View Commit History, Search Commit History, Commit Statistics, Top Contributors, Commit Activity, Export History Report.
+  - **AI Settings**: Set API Key, Update API Key, Remove API Key, Select AI Model.
+- **Empty State Handling**: Graceful repository state detection with helpful warning items and empty workspace views welcome.
+- **Dashboard Refresh & Title Action**: Dedicated title refresh command (`gitIQ.refreshSidebar`) with automatic workspace folder change tracking.
+
 ---
 
 ## [1.0.0] - 2026-08-07

@@ -87,7 +87,9 @@ export const COMMAND_IDS = {
 	setApiKey: 'gitIQ.setApiKey',
 	updateApiKey: 'gitIQ.updateApiKey',
 	removeApiKey: 'gitIQ.removeApiKey',
-	selectModel: 'gitIQ.selectModel'
+	selectModel: 'gitIQ.selectModel',
+	refreshSidebar: 'gitIQ.refreshSidebar',
+	aiCodeReview: 'gitIQ.aiCodeReview'
 } as const;
 
 /** Legacy command IDs for backwards compatibility. */
@@ -121,7 +123,9 @@ export const LEGACY_COMMAND_IDS: Record<keyof typeof COMMAND_IDS, string> = {
 	setApiKey: 'commitPilotAI.setApiKey',
 	updateApiKey: 'commitPilotAI.updateApiKey',
 	removeApiKey: 'commitPilotAI.removeApiKey',
-	selectModel: 'commitPilotAI.selectModel'
+	selectModel: 'commitPilotAI.selectModel',
+	refreshSidebar: 'commitPilotAI.refreshSidebar',
+	aiCodeReview: 'commitPilotAI.aiCodeReview'
 };
 
 /** Human-readable names used when presenting provider choices in UI. */

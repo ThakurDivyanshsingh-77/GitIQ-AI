@@ -43,6 +43,8 @@ import { LoggerService } from './services/loggerService';
 import { PromptBuilder } from './services/promptBuilder';
 import { PullRequestService } from './services/pullRequestService';
 import { SettingsService } from './services/SettingsService';
+import { SidebarTreeDataProvider } from './providers/sidebarTreeDataProvider';
+import { COMMAND_IDS } from './utils/constants';
 
 let loggerService: LoggerService | undefined;
 
@@ -149,7 +151,27 @@ export function activate(context: vscode.ExtensionContext): void {
 		registerRemoveApiKeyCommand(context, settingsService, loggerService);
 		registerSelectModelCommand(context, settingsService, loggerService);
 
-		console.log('[GitIQ] All 29 commands registered successfully');
+		// GitIQ Activity Bar Sidebar Tree View
+		const sidebarProvider = new SidebarTreeDataProvider(gitService);
+		context.subscriptions.push(
+			sidebarProvider,
+			vscode.window.registerTreeDataProvider('gitiq.sidebarView', sidebarProvider),
+			vscode.commands.registerCommand(COMMAND_IDS.refreshSidebar, () => {
+				sidebarProvider.refresh();
+				loggerService?.info('GitIQ sidebar refreshed.');
+			}),
+			vscode.commands.registerCommand(COMMAND_IDS.aiCodeReview, () => {
+				void vscode.window.showInformationMessage(
+					'GitIQ: AI Code Review is planned for an upcoming release. Stay tuned!'
+				);
+				loggerService?.info('AI Code Review (planned) invoked.');
+			}),
+			vscode.workspace.onDidChangeWorkspaceFolders(() => {
+				sidebarProvider.refresh();
+			})
+		);
+
+		console.log('[GitIQ] All commands and sidebar registered successfully');
 		loggerService.info('GitIQ extension activated successfully 🚀');
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : String(error);

@@ -75,7 +75,8 @@ src/
 │   ├── gitDiffPreviewProvider.ts     # TextDocumentContentProvider for diff preview
 │   ├── historyPreviewProvider.ts     # Read-only analytics markdown documents
 │   ├── pullRequestProvider.ts       # Read-only AI pull request documents
-│   └── repoInfoProvider.ts          # Read-only repository info document
+│   ├── repoInfoProvider.ts          # Read-only repository info document
+│   └── sidebarTreeDataProvider.ts   # Native Activity Bar sidebar TreeDataProvider
 ├── services/                         # Core Business Logic Services
 │   ├── commitMessageService.ts       # Orchestrates Diff -> Prompt -> AI -> Validator
 │   ├── commitMessageValidator.ts     # Validates AI response format
@@ -113,6 +114,8 @@ gitiq/
 │   └── extension.ts                  # Extension entry point
 ├── .agents/
 │   └── AGENTS.md                     # Mandatory PROJECT_CONTEXT.md update rule
+├── resources/
+│   └── icon.svg                      # 24x24 monochrome Activity Bar SVG icon
 ├── .gitignore
 ├── .vscodeignore                     # Excludes source files from extension package
 ├── CHANGELOG.md                      # Release notes & version history
@@ -178,6 +181,18 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 | `gitIQ.updateApiKey` | `GitIQ: Update Groq API Key` | Reuses secure prompt flow to update stored API key. |
 | `gitIQ.removeApiKey` | `GitIQ: Remove Groq API Key` | Deletes stored API key from `SecretStorage` after confirmation. |
 | `gitIQ.selectModel` | `GitIQ: Select Groq Model` | Displays QuickPick selector for supported Groq models and updates VS Code settings. |
+| `gitIQ.refreshSidebar` | `GitIQ: Refresh Dashboard` | Refreshes the GitIQ sidebar tree view. |
+| `gitIQ.aiCodeReview` | `GitIQ: AI Code Review (Planned)` | Informs user that AI Code Review is planned for an upcoming release. |
+
+### Views & Containers (`package.json`)
+- **Activity Bar Container (`gitiq-sidebar`)**: Dedicated GitIQ icon (`resources/icon.svg`) on the VS Code Activity Bar.
+- **Sidebar View (`gitiq.sidebarView`)**: TreeView backed by `SidebarTreeDataProvider` with organized categories:
+  - **AI Tools**: Commit message generation, diff preview, commit explain, code review (planned).
+  - **Pull Requests**: PR generation, PR page opening, title/description/full copying, markdown saving.
+  - **Git & GitHub**: Current branch, repo info, push, pull, fetch, repo/branch GitHub navigation.
+  - **Commit History**: History viewer, search, statistics, top contributors, activity, export report.
+  - **AI Settings**: Set, update, remove API keys and model selection.
+- **Views Welcome**: Native empty state view when no folder is open.
 
 ### Virtual Scheme Registration
 - **`gitiq-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
@@ -191,12 +206,14 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 
 ## 6. Current Status & Changelog
 
-### Current Status: Marketplace Production Release (`v1.0.2`)
-- [x] Implemented `esbuild` bundling pipeline (`npm run package`), bundling `groq-sdk` and all extension modules into a single self-contained `out/extension.js`.
+### Current Status: Marketplace Production Release (`v1.1.0`)
+- [x] **Activity Bar & Sidebar Dashboard**: Implemented dedicated Activity Bar icon container (`resources/icon.svg`) and native `TreeView` dashboard (`SidebarTreeDataProvider`).
+- [x] **Category Organization**: Structured all existing features into 5 intuitive sections (AI Tools, Pull Requests, Git & GitHub, Commit History, AI Settings).
+- [x] **Empty State Handling**: Graceful repository state detection with top-level warning item and empty workspace welcome view.
+- [x] **Implemented `esbuild` bundling pipeline (`npm run package`)**, bundling `groq-sdk` and all extension modules into a single self-contained `out/extension.js`.
 - [x] Excluded `node_modules/`, `src/`, and `.vscode/` from VSIX via `.vscodeignore` to eliminate all runtime module resolution failures.
-- [x] Audited and verified all 29 commands in `package.json`, `activationEvents`, `src/utils/constants.ts`, and `src/commands/*.ts`.
-- [x] Added console activation and command registration logging for Developer Tools diagnosis.
-- [x] Created dedicated `detail.md` containing full extension documentation, installation guide, API settings, feature breakdown, workflow, command table, and sample AI outputs.
+- [x] Audited and verified all 31 commands in `package.json`, `activationEvents`, `src/utils/constants.ts`, and `src/commands/*.ts`.
+- [x] Packaging verification (`vsce package`) successfully builds `gitiq-1.1.0.vsix` with 0 errors.
 - [x] Code quality verification (`npm run check`) passing with zero errors or warnings.
 
 ---
@@ -204,6 +221,7 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 ## 7. Pending Tasks & Known Issues
 
 ### Pending Tasks / Roadmap
+- [ ] **AI Code Review**: Implement automated multi-file code review with suggestions for staged changes.
 - [ ] **Multi-Provider Support**: Implement `OpenAIProvider`, `GeminiProvider`, and `OllamaProvider` behind `AIProviderFactory`.
 - [ ] **Custom Prompt Templates**: Allow users to define custom instructions or commit style rules in settings.
 - [ ] **Source Control UI Integration**: Add an inline button to the VS Code Source Control (SCM) panel to generate commit messages directly into the SCM input box.
@@ -231,12 +249,14 @@ npm run watch
 
 # 4. Run linting & type checks
 npm run check
+
+# 5. Package VSIX
+npx @vscode/vsce package
 ```
 
 ### Running & Debugging in VS Code
 1. Open this folder in Visual Studio Code.
 2. Press `F5` to open the **Extension Development Host**.
-3. In the new window, open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-4. Set Groq API key via `GitIQ: Set Groq API Key`.
-5. Run any of the contributed `GitIQ: ...` commands.
-   hiiiii
+3. Click the GitIQ icon on the Activity Bar (left sidebar) to reveal the GitIQ Dashboard.
+4. Or open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) to run any `GitIQ: ...` command.
+5. Set Groq API key via `GitIQ: Set Groq API Key` (or through the AI Settings group in the sidebar).

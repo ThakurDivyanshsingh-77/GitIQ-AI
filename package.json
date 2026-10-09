@@ -2,7 +2,7 @@
   "name": "gitiq",
   "displayName": "GitIQ",
   "description": "AI-Powered Git Assistant for Visual Studio Code",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "publisher": "gitiq",
   "icon": "icon.png",
   "license": "MIT",
@@ -41,6 +41,7 @@
     "url": "https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI/issues"
   },
   "activationEvents": [
+    "onView:gitiq.sidebarView",
     "onCommand:gitIQ.hello",
     "onCommand:gitIQ.checkGitRepository",
     "onCommand:gitIQ.previewGitDiff",
@@ -69,7 +70,9 @@
     "onCommand:gitIQ.setApiKey",
     "onCommand:gitIQ.updateApiKey",
     "onCommand:gitIQ.removeApiKey",
-    "onCommand:gitIQ.selectModel"
+    "onCommand:gitIQ.selectModel",
+    "onCommand:gitIQ.refreshSidebar",
+    "onCommand:gitIQ.aiCodeReview"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -218,8 +221,54 @@
         "command": "gitIQ.selectModel",
         "title": "Select Groq Model",
         "category": "GitIQ"
+      },
+      {
+        "command": "gitIQ.refreshSidebar",
+        "title": "Refresh Dashboard",
+        "category": "GitIQ",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitIQ.aiCodeReview",
+        "title": "AI Code Review (Planned)",
+        "category": "GitIQ",
+        "icon": "$(beaker)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitiq-sidebar",
+          "title": "GitIQ",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitiq-sidebar": [
+        {
+          "id": "gitiq.sidebarView",
+          "name": "GitIQ Dashboard",
+          "type": "tree"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "gitiq.sidebarView",
+        "contents": "No folder is currently open in VS Code.\n[Open Folder](command:vscode.openFolder)",
+        "when": "workbenchState == 'empty'"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "gitIQ.refreshSidebar",
+          "when": "view == gitiq.sidebarView",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "GitIQ",
       "properties": {
