@@ -322,7 +322,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && npm run build",
     "watch": "tsc -watch -p ./",
     "build": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
     "package": "esbuild ./src/extension.ts --bundle --minify --outfile=out/extension.js --external:vscode --format=cjs --platform=node",

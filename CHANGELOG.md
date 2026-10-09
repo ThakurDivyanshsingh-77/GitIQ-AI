@@ -8,17 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 - **Dedicated Activity Bar Container**: Custom-designed GitIQ vector icon in the VS Code Activity Bar (`resources/icon.svg`).
-- **Sidebar Dashboard Redesign (`SidebarTreeDataProvider`)**:
-  - **Compact Branded Header**: GitIQ product branding and subtitle (`AI Git Assistant`) with title bar settings (`gitIQ.setApiKey`) and refresh actions.
-  - **Live Repository Status**: Real-time detection showing repository name, active branch, and status (`repo • branch • Active`) with instant empty-state guidance when outside a Git repository.
-  - **Prioritized Quick Actions**: Top-level 1-click access to most frequent workflows: *AI Commit*, *Create PR*, and *Commit History*.
-  - **Concise Collapsed Categories**: Replaced long, cluttering lists with neatly collapsed sections:
-    - *Git & GitHub* (Current Branch, Repository Info, Push, Pull, Fetch, Open on GitHub, Open Branch)
-    - *Pull Requests* (Generate PR, Open PR Page, Copy PR Title/Description/Entire PR, Save PR)
-    - *Commit Analytics* (Search Commits, Commit Statistics, Top Contributors, 7-Day Activity, Export Report)
-    - *AI Settings* (Set, Update, Remove API Key, Select AI Model)
-    - *Additional AI Tools* (Preview Staged Diff, Explain Commit)
-- **High-Density & Narrow Layout Optimization**: Concise labels, theme-aware icons, and zero horizontal clipping on narrow sidebars.
+- **Sidebar UX & Navigation Refactor (`SidebarTreeDataProvider`)**:
+  - **Compact Header & Live Status**: High-density branded header (`GitIQ` - `AI Git Assistant`) and repository summary (`repo` • `branch`) without intrusive auto-opened documents.
+  - **Primary Actions (Always Accessible)**: *AI Commit*, *Create PR*, and *Commit History* immediately visible without scrolling.
+  - **Default-Collapsed Secondary Navigation**: All secondary tool sections (*Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, *AI Settings*) are collapsed by default on first launch.
+  - **State Persistence via Stable IDs**: Every node has a stable identifier, allowing VS Code's native TreeView engine to preserve the user's expand/collapse choices across data updates and refreshes.
+  - **Short, Clean Labels & Tooltips**: Removed visual noise and wide inline descriptions in favor of concise labels (`AI Commit`, `Create PR`, `Commit History`, `Repository Info`, `Search Commits`, `Export Report`) with comprehensive hover tooltips.
+  - **Enhanced Build Pipeline**: `npm run compile` automatically invokes `esbuild` bundling to guarantee complete, self-contained output in development and launch hosts.
 
 ---
 
