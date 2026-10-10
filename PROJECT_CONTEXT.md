@@ -213,8 +213,11 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 
 ### Current Status: Marketplace Production Release (`v1.1.0`)
 - [x] **Activity Bar & Sidebar Redesign**: Implemented dedicated Activity Bar icon container (`resources/icon.svg`) and high-density, uncluttered `TreeView` dashboard (`SidebarTreeDataProvider`).
-- [x] **Compact by Default**: Header, repository summary, and 3 primary Quick Actions (*AI Commit*, *Create PR*, *Commit History*) immediately visible without scrolling.
-- [x] **Default-Collapsed Secondary Sections**: *Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, and *AI Settings* start collapsed by default.
+- [x] **Native Header & View Container**: Changed view name in `package.json` to `"Dashboard"` to eliminate repetitive `"GitIQ: GitIQ Dashboard"` title bar. Wired `treeView.description = currentBranch` to dynamically display the active branch natively in the panel header.
+- [x] **Eliminated Fake Header Item**: Removed dummy `GitIQ AI Git Assistant` root tree item that added visual clutter and redundant clicks.
+- [x] **Non-Disruptive Repository Status**: Converted repository item into a clean collapsible node with child details (`Branch`, `Remote`, `View Repository Report`). Removed automatic document launching on parent clicks so exploring the sidebar never hijacks the active editor.
+- [x] **Direct 1-Click Primary Actions**: Promoted high-frequency commands (*AI Commit*, *Create PR*, *Commit History*) to immediate top-level root items without unnecessary folder nesting.
+- [x] **Default-Collapsed Secondary Categories**: *Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, and *AI Settings* start collapsed by default.
 - [x] **TreeView Event-Driven Expansion Tracking**: Wired `createTreeView` with `onDidExpandElement` and `onDidCollapseElement` to keep user choices intact on refresh without forced collapse or unwanted expansion.
 - [x] **Clean, Short Labels**: Stripped visual clutter and long inline descriptions in favor of short labels and detailed tooltips.
 - [x] **Integrated Build Pipeline**: `npm run compile` automatically runs `tsc -p ./ && npm run build` to keep bundled `out/extension.js` fresh for debugging and launch.

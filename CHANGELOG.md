@@ -9,12 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - **Dedicated Activity Bar Container**: Custom-designed GitIQ vector icon in the VS Code Activity Bar (`resources/icon.svg`).
 - **Sidebar UX & Navigation Refactor (`SidebarTreeDataProvider`)**:
-  - **Compact Header & Live Status**: High-density branded header (`GitIQ` - `AI Git Assistant`) and repository summary (`repo` • `branch`) without intrusive auto-opened documents.
-  - **Primary Actions (Always Accessible)**: *AI Commit*, *Create PR*, and *Commit History* immediately visible without scrolling.
+  - **Native View Title & Branch Status**: Renamed view to `Dashboard` to eliminate redundant `GitIQ: GitIQ Dashboard` title bar prefix, and wired `treeView.description` to display the active branch dynamically in the native view header.
+  - **Removed Redundant Header Node**: Removed fake in-tree header row (`GitIQ AI Git Assistant`) to eliminate awkward hierarchy and wasted vertical space.
+  - **Non-Disruptive Repository Item**: Transformed repository row into an expandable container with child details (`Branch`, `Remote`, `View Repository Report`) and removed automatic document-opening on parent click, preventing unwanted editor tab hijacking.
+  - **Direct 1-Click Primary Actions**: Promoted *AI Commit*, *Create PR*, and *Commit History* directly to top level without nested `Quick Actions` folder wrappers.
   - **Default-Collapsed Secondary Navigation**: Enforced `vscode.TreeItemCollapsibleState.Collapsed` on all secondary tool sections (*Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, *AI Settings*).
   - **Expansion State Tracking**: Connected `vscode.window.createTreeView` with `onDidExpandElement` and `onDidCollapseElement` listeners and in-provider state tracking (`setExpanded`), guaranteeing user expansions are preserved across refreshes without unwanted re-expansion or forced collapse.
   - **Native Collapse All**: Enabled `showCollapseAll: true` in `createTreeView` for instant 1-click collapse of all open groups.
-  - **Short, Clean Labels & Tooltips**: Removed visual noise and wide inline descriptions in favor of concise labels (`AI Commit`, `Create PR`, `Commit History`, `Repository Info`, `Search Commits`, `Export Report`) with comprehensive hover tooltips.
+  - **Short, Clean Labels & Tooltips**: Removed visual noise and wide inline descriptions in favor of concise labels with comprehensive hover tooltips.
   - **Enhanced Build Pipeline**: `npm run compile` automatically invokes `esbuild` bundling to guarantee complete, self-contained output in development and launch hosts.
 
 ---

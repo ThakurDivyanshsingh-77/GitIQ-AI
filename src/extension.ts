@@ -152,11 +152,27 @@ export function activate(context: vscode.ExtensionContext): void {
 		registerSelectModelCommand(context, settingsService, loggerService);
 
 		// GitIQ Activity Bar Sidebar Tree View
-		const sidebarProvider = new SidebarTreeDataProvider(gitService, context.extensionUri);
+		const sidebarProvider = new SidebarTreeDataProvider(gitService);
 		const treeView = vscode.window.createTreeView('gitiq.sidebarView', {
 			treeDataProvider: sidebarProvider,
 			showCollapseAll: true
 		});
+
+		const updateTreeDescription = async (): Promise<void> => {
+			const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+			if (workspaceFolder && gitService) {
+				try {
+					const branch = await gitService.getCurrentBranch(workspaceFolder.uri.fsPath);
+					treeView.description = branch;
+				} catch {
+					treeView.description = undefined;
+				}
+			} else {
+				treeView.description = undefined;
+			}
+		};
+
+		void updateTreeDescription();
 
 		context.subscriptions.push(
 			sidebarProvider,
@@ -169,6 +185,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			}),
 			vscode.commands.registerCommand(COMMAND_IDS.refreshSidebar, () => {
 				sidebarProvider.refresh();
+				void updateTreeDescription();
 				loggerService?.info('GitIQ sidebar refreshed.');
 			}),
 			vscode.commands.registerCommand(COMMAND_IDS.aiCodeReview, () => {
@@ -179,6 +196,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			}),
 			vscode.workspace.onDidChangeWorkspaceFolders(() => {
 				sidebarProvider.refresh();
+				void updateTreeDescription();
 			})
 		);
 

@@ -84,8 +84,7 @@ export class SidebarTreeDataProvider
 		new Map<string, vscode.TreeItemCollapsibleState>();
 
 	public constructor(
-		private readonly gitService?: GitService,
-		private readonly extensionUri?: vscode.Uri
+		private readonly gitService?: GitService
 	) {}
 
 	/**
@@ -130,17 +129,36 @@ export class SidebarTreeDataProvider
 
 		const rootItems: GitIQTreeItem[] = [];
 
-		// 1. Compact Header (Non-collapsible)
-		rootItems.push(this.createHeaderItem());
-
-		// 2. Compact Repository Summary (Non-collapsible)
+		// 1. Repository Status (Collapsible, never hijacks editor on click)
 		const repoStatusItem = await this.getRepositoryStatusItem();
 		rootItems.push(repoStatusItem);
 
-		// 3. Quick Actions (Expanded by default for immediate 1-click access)
-		rootItems.push(this.createQuickActionsCategory());
+		// 2. Primary Actions (Always visible, direct 1-click access without folder nesting)
+		rootItems.push(
+			new GitIQTreeItem('AI Commit', vscode.TreeItemCollapsibleState.None, {
+				id: 'gitiq.act.aiCommit',
+				commandId: COMMAND_IDS.generateCommitMessage,
+				commandTitle: 'Generate Commit Message',
+				iconName: 'sparkle',
+				tooltip: 'Analyze staged changes and generate a Conventional Commit message with AI.'
+			}),
+			new GitIQTreeItem('Create PR', vscode.TreeItemCollapsibleState.None, {
+				id: 'gitiq.act.createPr',
+				commandId: COMMAND_IDS.generatePullRequest,
+				commandTitle: 'Generate Pull Request',
+				iconName: 'git-pull-request',
+				tooltip: 'Generate complete pull request title, description, and checklist with AI.'
+			}),
+			new GitIQTreeItem('Commit History', vscode.TreeItemCollapsibleState.None, {
+				id: 'gitiq.act.commitHistory',
+				commandId: COMMAND_IDS.viewCommitHistory,
+				commandTitle: 'View Commit History',
+				iconName: 'history',
+				tooltip: 'Browse recent commit history with interactive search and detail view.'
+			})
+		);
 
-		// 4. Secondary Sections (All COLLAPSED by default on fresh open)
+		// 3. Secondary Sections (COLLAPSED by default on fresh open)
 		rootItems.push(
 			this.createGitGitHubCategory(),
 			this.createPullRequestsCategory(),
@@ -150,25 +168,6 @@ export class SidebarTreeDataProvider
 		);
 
 		return rootItems;
-	}
-
-	/**
-	 * Compact header showing GitIQ logo and subtitle.
-	 */
-	private createHeaderItem(): GitIQTreeItem {
-		const iconUri = this.extensionUri
-			? vscode.Uri.joinPath(this.extensionUri, 'resources', 'icon.svg')
-			: undefined;
-
-		return new GitIQTreeItem('GitIQ', vscode.TreeItemCollapsibleState.None, {
-			id: 'gitiq.header',
-			description: 'AI Git Assistant',
-			iconUri,
-			iconName: iconUri ? undefined : 'hubot',
-			tooltip: 'GitIQ — AI Git Assistant for Visual Studio Code\nClick to view repository overview.',
-			commandId: COMMAND_IDS.repositoryInfo,
-			commandTitle: 'Repository Information'
-		});
 	}
 
 	/**
@@ -195,9 +194,9 @@ export class SidebarTreeDataProvider
 			try {
 				const isRepo = await this.gitService.isGitRepository(workspacePath);
 				if (!isRepo) {
-					return new GitIQTreeItem('No Git Repository', vscode.TreeItemCollapsibleState.None, {
+					return new GitIQTreeItem('Not a Git Repository', vscode.TreeItemCollapsibleState.None, {
 						id: 'gitiq.repoStatus',
-						description: 'Not detected',
+						description: 'Check status',
 						iconName: 'warning',
 						tooltip: `Folder "${folderName}" is not a Git repository.\nClick to run Git repository verification.`,
 						commandId: COMMAND_IDS.checkGitRepository,
@@ -226,13 +225,39 @@ export class SidebarTreeDataProvider
 					currentBranch = 'unknown';
 				}
 
-				return new GitIQTreeItem(repoName, vscode.TreeItemCollapsibleState.None, {
-					id: 'gitiq.repoStatus',
+				const id = 'gitiq.repoStatus';
+				const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Collapsed);
+
+				const children: GitIQTreeItem[] = [
+					new GitIQTreeItem(`Branch: ${currentBranch}`, vscode.TreeItemCollapsibleState.None, {
+						id: 'gitiq.repoStatus.branch',
+						commandId: COMMAND_IDS.currentBranch,
+						commandTitle: 'Show Current Branch',
+						iconName: 'git-branch',
+						tooltip: `Current branch: ${currentBranch}.\nClick to show branch notification.`
+					}),
+					new GitIQTreeItem(`Remote: ${repoName}`, vscode.TreeItemCollapsibleState.None, {
+						id: 'gitiq.repoStatus.remote',
+						commandId: COMMAND_IDS.openRepository,
+						commandTitle: 'Open GitHub Repository',
+						iconName: 'globe',
+						tooltip: `Remote repository: ${repoName}.\nClick to open on GitHub.`
+					}),
+					new GitIQTreeItem('View Repository Report', vscode.TreeItemCollapsibleState.None, {
+						id: 'gitiq.repoStatus.details',
+						commandId: COMMAND_IDS.repositoryInfo,
+						commandTitle: 'Repository Information',
+						iconName: 'file-text',
+						tooltip: 'Open comprehensive repository status report in editor tab.'
+					})
+				];
+
+				return new GitIQTreeItem(repoName, state, {
+					id,
 					description: currentBranch,
 					iconName: 'repo',
-					tooltip: `Repository: ${repoName}\nBranch: ${currentBranch}\nStatus: Active Git repository\nClick to view full repository details.`,
-					commandId: COMMAND_IDS.repositoryInfo,
-					commandTitle: 'Repository Information'
+					tooltip: `Repository: ${repoName}\nBranch: ${currentBranch}\nExpand to view branch, remote, and report options.`,
+					children
 				});
 			} catch {
 				// Non-blocking fallback
@@ -243,48 +268,7 @@ export class SidebarTreeDataProvider
 			id: 'gitiq.repoStatus',
 			description: 'Active',
 			iconName: 'repo',
-			tooltip: 'Click to view repository details.',
-			commandId: COMMAND_IDS.repositoryInfo,
-			commandTitle: 'Repository Information'
-		});
-	}
-
-	/**
-	 * Primary actions section — immediately accessible without scrolling.
-	 */
-	private createQuickActionsCategory(): GitIQTreeItem {
-		const id = 'gitiq.nav.quickActions';
-		const state = this.getCollapsibleState(id, vscode.TreeItemCollapsibleState.Expanded);
-
-		const children: GitIQTreeItem[] = [
-			new GitIQTreeItem('AI Commit', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.act.aiCommit',
-				commandId: COMMAND_IDS.generateCommitMessage,
-				commandTitle: 'Generate Commit Message',
-				iconName: 'sparkle',
-				tooltip: 'Analyze staged changes and generate a Conventional Commit message with AI.'
-			}),
-			new GitIQTreeItem('Create PR', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.act.createPr',
-				commandId: COMMAND_IDS.generatePullRequest,
-				commandTitle: 'Generate Pull Request',
-				iconName: 'git-pull-request',
-				tooltip: 'Generate complete pull request title, description, and checklist with AI.'
-			}),
-			new GitIQTreeItem('Commit History', vscode.TreeItemCollapsibleState.None, {
-				id: 'gitiq.act.commitHistory',
-				commandId: COMMAND_IDS.viewCommitHistory,
-				commandTitle: 'View Commit History',
-				iconName: 'history',
-				tooltip: 'Browse recent commit history with interactive search and detail view.'
-			})
-		];
-
-		return new GitIQTreeItem('Quick Actions', state, {
-			id,
-			iconName: 'zap',
-			tooltip: 'Primary GitIQ workflows.',
-			children
+			tooltip: `Folder: ${folderName}`
 		});
 	}
 

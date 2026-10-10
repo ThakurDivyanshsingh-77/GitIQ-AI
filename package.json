@@ -249,7 +249,7 @@
       "gitiq-sidebar": [
         {
           "id": "gitiq.sidebarView",
-          "name": "GitIQ Dashboard",
+          "name": "Dashboard",
           "type": "tree"
         }
       ]
