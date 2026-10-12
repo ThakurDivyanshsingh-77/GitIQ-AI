@@ -4,6 +4,33 @@ All notable changes to **GitIQ** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-10-12
+
+### Added
+- **Bring Your Own AI (BYO-AI) Architecture**:
+  - **GitHub Copilot Integration**: Native `VSCodeLanguageModelProvider` using official `vscode.lm.selectChatModels()` API. Zero Groq API key required, zero token scraping, streaming token delivery, and cancellation token support.
+  - **Google Gemini Provider**: Added `GeminiProvider` with direct REST support for `gemini-1.5-flash` and `gemini-1.5-pro` with secure key storage in `vscode.SecretStorage`.
+  - **Ollama Provider**: Added `OllamaProvider` connecting to local offline instances (`http://localhost:11434`) with zero credentials needed.
+  - **External Agent / MCP Provider**: Added `MCPProvider` to delegate AI operations to local MCP-compatible servers.
+- **Model Context Protocol (MCP) Integration**:
+  - Standalone Stdio JSON-RPC 2.0 server (`out/mcp/server.js`) exposing 6 safe GitIQ tools: `get_repository_info`, `get_git_status`, `get_staged_diff`, `search_commit_history`, `generate_commit_message_suggestion`, and `prepare_pull_request_description`.
+  - Native VS Code Language Model Tool registration via `vscode.lm.registerTool`.
+  - Clear separation between suggestions and executions (`status: "SUGGESTION_ONLY"`, `executed: false`).
+- **Interactive Provider Selection UI**:
+  - Added Command Palette switcher `GitIQ: Select AI Provider` (`gitIQ.selectProvider`) with configured status indicators.
+  - Added Command Palette command `GitIQ: Set Gemini API Key` (`gitIQ.setGeminiApiKey`).
+  - Added active provider badge and Quick Action buttons in the Sidebar Webview dashboard.
+- **Documentation & Verification**:
+  - Added comprehensive `docs/EXTERNAL_AGENT_COMPATIBILITY.md` detailing integration mechanics and boundaries for GitHub Copilot, Google Antigravity, Anthropic Claude Code, and OpenAI Codex.
+  - Added automated unit test suite with 26 passing tests across 4 test suites running on Node's native test runner (`node --test`).
+
+### Security
+- Complete elimination of token scraping, private cookie inspection, or internal authorization file harvesting.
+- Secrets isolated per provider in OS keychain via `vscode.SecretStorage` (`gitiq.groqApiKey`, `gitiq.geminiApiKey`).
+- Read-only Git tool defaults and credential scrubbing across MCP endpoints.
+
+---
+
 ## [1.1.0] - 2026-10-09
 
 ### Added

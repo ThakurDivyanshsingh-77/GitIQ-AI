@@ -21,7 +21,14 @@ AI-Powered Git Assistant for Visual Studio Code
 
 ## 📖 Overview
 
-**GitIQ** is an extension for Visual Studio Code designed to elevate developer productivity and standardize version control practices. By inspecting your staged Git diffs and repository history, GitIQ automatically drafts concise, conventional commit messages and complete Pull Request documents using high-performance AI models powered by the **Groq API** (`llama-3.3-70b-versatile`).
+**GitIQ** is an extension for Visual Studio Code designed to elevate developer productivity and standardize version control practices. By inspecting your staged Git diffs and repository history, GitIQ automatically drafts concise, conventional commit messages and complete Pull Request documents using a provider-independent **Bring Your Own AI (BYO-AI)** architecture.
+
+Connect GitIQ with your existing AI access:
+- **GitHub Copilot**: Use your active Copilot subscription via native `vscode.lm` APIs—zero API keys required!
+- **Google Gemini API**: Direct REST API integration (`gemini-1.5-flash`, `gemini-1.5-pro`).
+- **Ollama**: 100% offline, privacy-first local inference (`http://localhost:11434`).
+- **Groq API**: High-speed cloud models (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`).
+- **Model Context Protocol (MCP)**: Expose safe GitIQ tools to external agents (Claude Code, Google Antigravity, OpenAI Codex) via standalone stdio server or native VS Code Language Model Tools.
 
 In addition to AI capabilities, GitIQ features a suite of **offline Git tools**—including keyword search, commit statistics, 7-day activity tables, contributor rankings, and GitHub web shortcuts—operating instantly without remote API calls.
 
@@ -29,7 +36,7 @@ In addition to AI capabilities, GitIQ features a suite of **offline Git tools**�
 
 ## 🎥 Demo
 
-<div align="center"> ..
+<div align="center">
 
 ![GitIQ Demo Placeholder](images/demo.gif)
 
@@ -53,7 +60,13 @@ In addition to AI capabilities, GitIQ features a suite of **offline Git tools**�
 
 ## ✨ Key Features
 
-### 🤖 AI-Powered Productivity
+### 🤖 Bring Your Own AI (BYO-AI) Architecture
+- **GitHub Copilot Integration**: Seamlessly dispatches requests to Copilot chat models using VS Code's official Language Model API (`vscode.lm.selectChatModels`). Respects user consent, supports request cancellation, and streams completions.
+- **Multi-Provider Switcher**: Switch instantly between Groq, GitHub Copilot, Google Gemini, Ollama (local offline), and MCP delegation.
+- **Model Context Protocol (MCP) Integration**:
+  - Exposes 6 read-only, safe Git tools (`get_repository_info`, `get_git_status`, `get_staged_diff`, `search_commit_history`, `generate_commit_message_suggestion`, `prepare_pull_request_description`).
+  - Available as a standalone stdio JSON-RPC server (`out/mcp/server.js`) for Claude Code, Antigravity, and Codex.
+  - Available inside VS Code via `vscode.lm.registerTool`.
 - **Conventional Commit Generator**: Drafts structured `feat:`, `fix:`, `refactor:`, `docs:`, `perf:` messages directly from your staged diffs (`git diff --cached`).
 - **AI Commit Explanation**: Explains complex commits in plain English—summarizing purpose, affected files, major changes, and potential system impact.
 - **AI Pull Request Helper**: Constructs complete, professional Pull Requests (Title, Summary, Detailed Description, Files Changed, Testing, Breaking Changes, Checklist) from branch diffs and commit histories.
@@ -65,10 +78,11 @@ In addition to AI capabilities, GitIQ features a suite of **offline Git tools**�
 - **Commit Activity**: Generates 7-day commit distribution breakdown tables.
 - **Export Report**: Saves a complete Markdown report (`commit-history-report.md`) directly to your workspace root.
 
-### 🛡️ Security & Configuration
-- **OS-Level Secret Storage**: Stores your API key safely in `vscode.SecretStorage`. Keys are never saved in plain text.
-- **Automatic Migration**: Detects legacy setting keys and migrates them to secure storage with one click.
-- **Groq Model Selector**: Switch between `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-120b`, and `deepseek-r1-distill-llama-70b`.
+### 🛡️ Security & Privacy
+- **Zero Token Scraping**: GitIQ never inspects private session tokens, browser cookies, or internal authorization files.
+- **OS-Level Secret Storage**: API keys are saved encrypted via `vscode.SecretStorage`. Copilot and Ollama require zero keys.
+- **Explicit Human Approval**: AI suggestions are presented in an editable input box for developer review before any commit or push occurs.
+- **Strict Data Sanitization**: MCP tools redact sensitive credentials, tokens, and files from repository metadata and diffs.
 
 ---
 
@@ -77,11 +91,15 @@ In addition to AI capabilities, GitIQ features a suite of **offline Git tools**�
 ### 1. Installation
 Install GitIQ directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gitiq.gitiq) or search for `GitIQ` in the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
 
-### 2. Configure Groq API Key
-1. Obtain a free API key from [Groq Console](https://console.groq.com/).
-2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-3. Run: `GitIQ: Set Groq API Key`.
-4. Enter your key (`gsk_...`). It will be saved securely in VS Code `SecretStorage`.
+### 2. Choose Your AI Provider
+Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run:
+`GitIQ: Select AI Provider`
+
+- **GitHub Copilot**: Select `GitHub Copilot (Built-in LM)`. Requires the GitHub Copilot extension. No API key needed!
+- **Groq API**: Select `Groq API` and run `GitIQ: Set Groq API Key` with your key from [Groq Console](https://console.groq.com/).
+- **Google Gemini**: Select `Google Gemini API` and run `GitIQ: Set Gemini API Key` with your key from Google AI Studio.
+- **Ollama**: Select `Ollama (Local Offline)`. Start Ollama locally (`ollama run llama3.2`). No key needed!
+- **MCP Delegation**: Select `External Agent / MCP` for custom local agent routing.
 
 ### 3. Basic Usage
 1. **Stage your changes**: `git add .`
@@ -90,16 +108,52 @@ Install GitIQ directly from the [VS Code Marketplace](https://marketplace.visual
 
 ---
 
+## 🔌 Model Context Protocol (MCP) Setup
+
+GitIQ includes a standalone stdio MCP server enabling AI agents like Claude Code, Google Antigravity, and OpenAI Codex to inspect Git status, diffs, and generate commit suggestions safely.
+
+### Connecting to External Agents (e.g. Claude Code or Antigravity)
+
+Add GitIQ to your client's `mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "gitiq": {
+      "command": "node",
+      "args": [
+        "/path/to/vscode-extension-gitiq/out/mcp/server.js"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+> See [docs/EXTERNAL_AGENT_COMPATIBILITY.md](docs/EXTERNAL_AGENT_COMPATIBILITY.md) for full setup guides, agent permission models, and security guarantees.
+
+---
+
 ## 🛠️ Complete Commands Reference
 
 | Command Title | Command ID | Description |
 | :--- | :--- | :--- |
-| `GitIQ: Hello` | `gitIQ.hello` | Health check command verifying extension activation. |
-| `GitIQ: Check Git Repository` | `gitIQ.checkGitRepository` | Verifies whether the workspace is inside a Git repository. |
-| `GitIQ: Preview Git Diff` | `gitIQ.previewGitDiff` | Opens read-only virtual diff document for staged changes (`git diff --cached`). |
+| `GitIQ: Select AI Provider` | `gitIQ.selectProvider` | QuickPick switcher for active AI backend (Copilot, Groq, Gemini, Ollama, MCP). |
+| `GitIQ: Set Gemini API Key` | `gitIQ.setGeminiApiKey` | Prompts for Google Gemini API key and stores in SecretStorage. |
+| `GitIQ: Set Groq API Key` | `gitIQ.setApiKey` | Prompts for Groq API key and stores securely in VS Code `SecretStorage`. |
+| `GitIQ: Update Groq API Key` | `gitIQ.updateApiKey` | Reuses secure prompt flow to update stored Groq API key. |
+| `GitIQ: Remove Groq API Key` | `gitIQ.removeApiKey` | Deletes stored Groq API key from `SecretStorage`. |
+| `GitIQ: Select Groq Model` | `gitIQ.selectModel` | Displays QuickPick selector for supported Groq models. |
 | `GitIQ: Generate Commit Message` | `gitIQ.generateCommitMessage` | Analyzes staged changes with AI and presents editable commit box. |
-| `GitIQ: View Commit History` | `gitIQ.viewCommitHistory` | Displays recent commits (`git log -n 20`) in QuickPick with details viewer. |
+| `GitIQ: Generate Pull Request` | `gitIQ.generatePullRequest` | Generates complete AI Pull Request document from branch diff & history. |
 | `GitIQ: Explain Commit` | `gitIQ.explainCommit` | Generates a plain English AI explanation of any commit. |
+| `GitIQ: Preview Git Diff` | `gitIQ.previewGitDiff` | Opens read-only virtual diff document for staged changes (`git diff --cached`). |
+| `GitIQ: View Commit History` | `gitIQ.viewCommitHistory` | Displays recent commits (`git log -n 20`) in QuickPick with details viewer. |
+| `GitIQ: Search Commit History` | `gitIQ.searchCommitHistory` | Offline keyword search across commit messages (`git log --all --grep`). |
+| `GitIQ: Commit Statistics` | `gitIQ.commitStatistics` | Aggregates repository commit metrics and age statistics. |
+| `GitIQ: Top Contributors` | `gitIQ.topContributors` | Displays ranked contributor commit counts using `git shortlog -sn`. |
+| `GitIQ: Commit Activity` | `gitIQ.commitActivity` | Displays 7-day commit activity breakdown as a Markdown table. |
+| `GitIQ: Export History Report` | `gitIQ.exportHistoryReport` | Exports complete Markdown analytics report to `commit-history-report.md`. |
 | `GitIQ: Copy Commit Hash` | `gitIQ.copyCommitHash` | Copies selected commit hash to system clipboard. |
 | `GitIQ: Push Branch` | `gitIQ.push` | Pushes current branch to remote origin with progress notification. |
 | `GitIQ: Pull Branch` | `gitIQ.pull` | Pulls latest changes from remote origin with conflict detection. |
@@ -108,21 +162,14 @@ Install GitIQ directly from the [VS Code Marketplace](https://marketplace.visual
 | `GitIQ: Repository Information` | `gitIQ.repositoryInfo` | Opens read-only Markdown document summarizing repository metadata. |
 | `GitIQ: Open GitHub Repository` | `gitIQ.openRepository` | Detects origin URL and opens repository in default browser. |
 | `GitIQ: Open Current Branch on GitHub` | `gitIQ.openBranch` | Opens active branch on GitHub in default browser. |
-| `GitIQ: Generate Pull Request` | `gitIQ.generatePullRequest` | Generates complete AI Pull Request document from branch diff & history. |
+| `GitIQ: Open Pull Request Page` | `gitIQ.openPullRequestPage` | Opens GitHub compare URL (`/compare/main...currentBranch`) in browser. |
 | `GitIQ: Copy PR Title` | `gitIQ.copyPRTitle` | Copies generated PR title to clipboard. |
 | `GitIQ: Copy PR Description` | `gitIQ.copyPRDescription` | Copies generated PR description Markdown to clipboard. |
 | `GitIQ: Copy Entire Pull Request` | `gitIQ.copyEntirePR` | Copies full generated PR document to clipboard. |
 | `GitIQ: Save Pull Request` | `gitIQ.savePullRequest` | Saves generated PR as `pull-request.md` in workspace root. |
-| `GitIQ: Open Pull Request Page` | `gitIQ.openPullRequestPage` | Opens GitHub compare URL (`/compare/main...currentBranch`) in browser. |
-| `GitIQ: Search Commit History` | `gitIQ.searchCommitHistory` | Offline keyword search across commit messages (`git log --all --grep`). |
-| `GitIQ: Commit Statistics` | `gitIQ.commitStatistics` | Aggregates repository commit metrics and age statistics. |
-| `GitIQ: Top Contributors` | `gitIQ.topContributors` | Displays ranked contributor commit counts using `git shortlog -sn`. |
-| `GitIQ: Commit Activity` | `gitIQ.commitActivity` | Displays 7-day commit activity breakdown as a Markdown table. |
-| `GitIQ: Export History Report` | `gitIQ.exportHistoryReport` | Exports complete Markdown analytics report to `commit-history-report.md`. |
-| `GitIQ: Set Groq API Key` | `gitIQ.setApiKey` | Prompts for Groq API key and stores securely in VS Code `SecretStorage`. |
-| `GitIQ: Update Groq API Key` | `gitIQ.updateApiKey` | Reuses secure prompt flow to update stored API key. |
-| `GitIQ: Remove Groq API Key` | `gitIQ.removeApiKey` | Deletes stored API key from `SecretStorage` after confirmation. |
-| `GitIQ: Select Groq Model` | `gitIQ.selectModel` | Displays QuickPick selector for supported Groq models. |
+| `GitIQ: Refresh Dashboard` | `gitIQ.refreshSidebar` | Refreshes the GitIQ sidebar webview. |
+| `GitIQ: Check Git Repository` | `gitIQ.checkGitRepository` | Verifies whether the workspace is inside a Git repository. |
+| `GitIQ: Hello` | `gitIQ.hello` | Health check command verifying extension activation. |
 
 ---
 
@@ -132,11 +179,14 @@ GitIQ provides customizable configuration settings under the `gitIQ` section in 
 
 | Setting Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `gitIQ.apiKey` | `string` | `""` | Legacy fallback key for Groq API authentication. Keys are stored in `SecretStorage`. |
-| `gitIQ.provider` | `enum` | `"groq"` | Active AI provider (`groq`, `openai`, `gemini`, `ollama`). |
-| `gitIQ.model` | `string` | `"llama-3.3-70b-versatile"` | Model ID used for AI generation (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, etc.). |
+| `gitIQ.provider` | `enum` | `"groq"` | Active AI provider (`groq`, `copilot`, `gemini`, `ollama`, `mcp`). |
+| `gitIQ.model` | `string` | `"llama-3.3-70b-versatile"` | Model ID used for Groq AI generation. |
+| `gitIQ.geminiModel` | `string` | `"gemini-1.5-flash"` | Model ID for Gemini provider (`gemini-1.5-flash`, `gemini-1.5-pro`). |
+| `gitIQ.ollamaEndpoint`| `string` | `"http://localhost:11434"` | Base URL for local Ollama server. |
+| `gitIQ.ollamaModel` | `string` | `"llama3.2"` | Model name for Ollama completion requests. |
+| `gitIQ.copilotFamily`| `string` | `""` | Optional Copilot model family filter (e.g. `gpt-4o`). |
 | `gitIQ.temperature` | `number` | `0.2` | Sampling temperature for AI generation (0.0 to 2.0). |
-| `gitIQ.timeout` | `number` | `30000` | Groq request timeout in milliseconds. |
+| `gitIQ.timeout` | `number` | `30000` | Request timeout in milliseconds. |
 
 ---
 
