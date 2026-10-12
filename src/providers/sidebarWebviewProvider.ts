@@ -43,13 +43,18 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 
 		webviewView.webview.html = this.getHtmlForWebview();
 
-		webviewView.webview.onDidReceiveMessage(async (data: { command: string; args?: unknown[] }) => {
+		webviewView.webview.onDidReceiveMessage(async (data: { command: string; args?: unknown[]; file?: string; line?: number }) => {
 			if (!data || !data.command) {
 				return;
 			}
 
 			if (data.command === 'refresh') {
 				await this.updateState();
+				return;
+			}
+
+			if (data.command === 'openFileAtLine' && typeof data.file === 'string') {
+				await this.openFileAtLine(data.file, typeof data.line === 'number' ? data.line : 1);
 				return;
 			}
 
@@ -68,6 +73,45 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 
 		// Push initial state once webview is ready
 		void this.updateState();
+	}
+
+	/**
+	 * Posts Code Review progress, results, or error state to the sidebar Webview.
+	 */
+	public postCodeReviewState(state: unknown): void {
+		if (this._view) {
+			void this._view.webview.postMessage({
+				type: 'codeReviewState',
+				state
+			});
+		}
+	}
+
+	/**
+	 * Opens a file in the editor and scrolls to the specified line number safely.
+	 */
+	public async openFileAtLine(filePath: string, line: number): Promise<void> {
+		const workspaceFolders = vscode.workspace.workspaceFolders;
+		if (!workspaceFolders || workspaceFolders.length === 0) {
+			return;
+		}
+
+		const workspacePath = workspaceFolders[0].uri.fsPath;
+		const fullPath = path.isAbsolute(filePath) ? filePath : path.resolve(workspacePath, filePath);
+
+		try {
+			const uri = vscode.Uri.file(fullPath);
+			const doc = await vscode.workspace.openTextDocument(uri);
+			const editor = await vscode.window.showTextDocument(doc, { preview: true });
+			const targetLine = Math.max(0, Math.min(doc.lineCount - 1, (line > 0 ? line - 1 : 0)));
+			const pos = new vscode.Position(targetLine, 0);
+			editor.selection = new vscode.Selection(pos, pos);
+			editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+		} catch (error: unknown) {
+			const msg = error instanceof Error ? error.message : String(error);
+			this.logger?.warn(`Could not open file at ${fullPath}:${line} - ${msg}`);
+			void vscode.window.showWarningMessage(`GitIQ: Could not open "${filePath}" at line ${line} (${msg})`);
+		}
 	}
 
 	/**
@@ -352,6 +396,278 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 			line-height: 1.25;
 		}
 
+		/* Code Review Active Panel */
+		.code-review-panel {
+			background: var(--card-bg);
+			border: 1px solid var(--border-color);
+			border-radius: 8px;
+			padding: 12px;
+			margin-top: 10px;
+			margin-bottom: 8px;
+			display: flex;
+			flex-direction: column;
+			gap: 9px;
+			animation: fadeIn 0.2s ease;
+		}
+
+		@keyframes fadeIn {
+			from { opacity: 0; transform: translateY(-4px); }
+			to { opacity: 1; transform: translateY(0); }
+		}
+
+		.review-header-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 8px;
+		}
+
+		.review-header-title {
+			font-size: 13px;
+			font-weight: 600;
+			color: #ffffff;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.review-target-badge {
+			font-size: 10.5px;
+			font-weight: 500;
+			padding: 2px 6px;
+			border-radius: 4px;
+			background: rgba(88, 166, 255, 0.15);
+			color: var(--accent-blue);
+			border: 1px solid rgba(88, 166, 255, 0.3);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 140px;
+		}
+
+		.review-dismiss-btn {
+			background: transparent;
+			border: none;
+			color: var(--text-muted);
+			cursor: pointer;
+			padding: 2px 4px;
+			border-radius: 4px;
+			font-size: 11px;
+		}
+		.review-dismiss-btn:hover {
+			color: #ffffff;
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		/* Severity count pills */
+		.severity-counts {
+			display: flex;
+			gap: 5px;
+			flex-wrap: wrap;
+		}
+
+		.severity-pill {
+			font-size: 10.5px;
+			font-weight: 600;
+			padding: 2px 7px;
+			border-radius: 12px;
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+		}
+
+		.severity-pill.critical {
+			background: rgba(248, 81, 73, 0.15);
+			color: #ff7b72;
+			border: 1px solid rgba(248, 81, 73, 0.35);
+		}
+
+		.severity-pill.high {
+			background: rgba(240, 136, 62, 0.15);
+			color: #f0883e;
+			border: 1px solid rgba(240, 136, 62, 0.35);
+		}
+
+		.severity-pill.medium {
+			background: rgba(227, 179, 65, 0.15);
+			color: #e3b341;
+			border: 1px solid rgba(227, 179, 65, 0.35);
+		}
+
+		.severity-pill.low {
+			background: rgba(63, 185, 80, 0.15);
+			color: #7ee787;
+			border: 1px solid rgba(63, 185, 80, 0.35);
+		}
+
+		.review-summary-text {
+			font-size: 11.5px;
+			color: var(--text-muted);
+			line-height: 1.4;
+			background: rgba(0, 0, 0, 0.2);
+			padding: 8px 10px;
+			border-radius: 6px;
+			border-left: 3px solid var(--accent-blue);
+		}
+
+		/* Finding Cards */
+		.findings-list {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			max-height: 380px;
+			overflow-y: auto;
+			padding-right: 2px;
+		}
+
+		.finding-card {
+			background: rgba(255, 255, 255, 0.02);
+			border: 1px solid var(--border-color);
+			border-radius: 6px;
+			overflow: hidden;
+			transition: border-color 0.15s ease;
+		}
+
+		.finding-card:hover {
+			border-color: var(--border-hover-color);
+		}
+
+		.finding-header {
+			padding: 8px 10px;
+			cursor: pointer;
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+		}
+
+		.finding-title-row {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 6px;
+		}
+
+		.finding-title {
+			font-size: 12px;
+			font-weight: 600;
+			color: #ffffff;
+			line-height: 1.3;
+		}
+
+		.finding-meta {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			font-size: 10.5px;
+			color: var(--text-muted);
+		}
+
+		.finding-file-link {
+			color: var(--accent-blue);
+			text-decoration: none;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			gap: 3px;
+		}
+
+		.finding-file-link:hover {
+			text-decoration: underline;
+		}
+
+		.finding-details {
+			display: none;
+			padding: 8px 10px;
+			border-top: 1px solid var(--border-color);
+			background: rgba(0, 0, 0, 0.15);
+			font-size: 11px;
+			line-height: 1.4;
+			color: #c9d1d9;
+		}
+
+		.finding-card.open .finding-details {
+			display: block;
+		}
+
+		.finding-detail-section {
+			margin-bottom: 6px;
+		}
+
+		.finding-detail-label {
+			font-size: 10px;
+			font-weight: 600;
+			text-transform: uppercase;
+			color: var(--text-muted);
+			margin-bottom: 2px;
+		}
+
+		.finding-code-block {
+			background: rgba(0, 0, 0, 0.4);
+			border: 1px solid var(--border-color);
+			border-radius: 4px;
+			padding: 6px 8px;
+			font-family: var(--vscode-editor-font-family, monospace);
+			font-size: 11px;
+			color: #7ee787;
+			overflow-x: auto;
+			white-space: pre-wrap;
+			word-break: break-all;
+			margin-top: 4px;
+		}
+
+		/* Review Footer Buttons */
+		.review-actions-row {
+			display: flex;
+			gap: 6px;
+			margin-top: 4px;
+		}
+
+		.review-btn {
+			flex: 1;
+			background: rgba(255, 255, 255, 0.06);
+			border: 1px solid var(--border-color);
+			color: #ffffff;
+			padding: 6px 10px;
+			border-radius: 6px;
+			font-size: 11px;
+			font-weight: 500;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 5px;
+			transition: background-color 0.15s ease, border-color 0.15s ease;
+		}
+
+		.review-btn:hover {
+			background: rgba(255, 255, 255, 0.12);
+			border-color: var(--border-hover-color);
+		}
+
+		.review-btn.primary {
+			background: var(--vscode-button-background, #238636);
+			color: var(--vscode-button-foreground, #ffffff);
+			border: none;
+		}
+
+		.review-btn.primary:hover {
+			background: var(--vscode-button-hoverBackground, #2ea043);
+		}
+
+		/* Spinner */
+		.spinner {
+			width: 14px;
+			height: 14px;
+			border: 2px solid rgba(88, 166, 255, 0.3);
+			border-top-color: var(--accent-blue);
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+		}
+
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+
 		/* All Tools List */
 		.tools-list {
 			display: flex;
@@ -566,6 +882,9 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 			<div class="card-subtitle">Explore commits</div>
 		</div>
 	</div>
+
+	<!-- AI Code Review Active Panel -->
+	<div id="codeReviewPanel" class="code-review-panel" style="display: none;"></div>
 
 	<!-- All Tools Section -->
 	<div class="section-header with-margin">
@@ -832,8 +1151,193 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 						descEl.textContent = 'Active: ' + state.activeProvider.toUpperCase();
 					}
 				}
+			} else if (msg && msg.type === 'codeReviewState' && msg.state) {
+				renderCodeReviewState(msg.state);
 			}
 		});
+
+		function renderCodeReviewState(state) {
+			const panel = document.getElementById('codeReviewPanel');
+			if (!panel) return;
+
+			if (state.status === 'loading') {
+				panel.style.display = 'flex';
+				panel.innerHTML = `
+					<div class="review-header-row">
+						<div class="review-header-title">
+							<div class="spinner"></div>
+							AI Code Review
+						</div>
+						<div class="review-target-badge">${escapeHtml(state.targetLabel || 'Analyzing...')}</div>
+					</div>
+					<div class="review-summary-text">
+						Inspecting diff changes for security, bugs, logic, and performance issues...
+					</div>
+				`;
+			} else if (state.status === 'success' && state.result) {
+				const r = state.result;
+				const sum = r.summary;
+				panel.style.display = 'flex';
+
+				let findingsHtml = '';
+				if (r.findings.length === 0) {
+					findingsHtml = `
+						<div style="padding: 12px; text-align: center; color: var(--accent-green); font-size: 12px;">
+							✓ No issues detected in ${escapeHtml(sum.targetLabel)}!
+						</div>
+					`;
+				} else {
+					findingsHtml = r.findings.map(f => {
+						const sevClass = (f.severity || 'Medium').toLowerCase();
+						const lineText = f.line ? (f.endLine && f.endLine !== f.line ? ':' + f.line + '-' + f.endLine : ':' + f.line) : '';
+						const locText = escapeHtml(f.file) + lineText;
+
+						let detailsHtml = `
+							<div class="finding-detail-section">
+								<div class="finding-detail-label">Problem</div>
+								<div>${escapeHtml(f.explanation)}</div>
+							</div>
+							<div class="finding-detail-section">
+								<div class="finding-detail-label">Why it matters</div>
+								<div>${escapeHtml(f.impact)}</div>
+							</div>
+							<div class="finding-detail-section">
+								<div class="finding-detail-label">Recommended Fix</div>
+								<div>${escapeHtml(f.recommendation)}</div>
+							</div>
+						`;
+
+						if (f.codeSuggestion) {
+							detailsHtml += `
+								<div class="finding-detail-section">
+									<div class="finding-detail-label">Suggested Code</div>
+									<div class="finding-code-block">${escapeHtml(f.codeSuggestion)}</div>
+								</div>
+							`;
+						}
+
+						return `
+							<div class="finding-card" id="${f.id}">
+								<div class="finding-header" onclick="toggleFinding('${f.id}')">
+									<div class="finding-title-row">
+										<span class="finding-title">${escapeHtml(f.title)}</span>
+										<span class="severity-pill ${sevClass}">${escapeHtml(f.severity)}</span>
+									</div>
+									<div class="finding-meta">
+										<span class="finding-file-link" onclick="openFile(event, '${escapeJs(f.file)}', ${f.line || 1})">
+											📄 ${locText}
+										</span>
+										<span>•</span>
+										<span>${escapeHtml(f.category)}</span>
+										${f.confidence === 'Uncertain' ? '<span>• <i>(Uncertain)</i></span>' : ''}
+									</div>
+								</div>
+								<div class="finding-details">
+									${detailsHtml}
+								</div>
+							</div>
+						`;
+					}).join('');
+				}
+
+				panel.innerHTML = `
+					<div class="review-header-row">
+						<div class="review-header-title">
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+							Review Results
+						</div>
+						<div style="display: flex; align-items: center; gap: 6px;">
+							<div class="review-target-badge">${escapeHtml(sum.targetLabel)}</div>
+							<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>
+						</div>
+					</div>
+
+					<div class="severity-counts">
+						<span class="severity-pill critical">Critical: ${sum.criticalCount}</span>
+						<span class="severity-pill high">High: ${sum.highCount}</span>
+						<span class="severity-pill medium">Medium: ${sum.mediumCount}</span>
+						<span class="severity-pill low">Low: ${sum.lowCount}</span>
+					</div>
+
+					<div class="review-summary-text">${escapeHtml(sum.overallSummary)}</div>
+
+					<div class="findings-list">
+						${findingsHtml}
+					</div>
+
+					<div class="review-actions-row">
+						<button class="review-btn" onclick="runReviewAgain()">
+							↻ Re-run
+						</button>
+						<button class="review-btn primary" onclick="openReport()">
+							Open Report
+						</button>
+					</div>
+				`;
+			} else if (state.status === 'empty') {
+				panel.style.display = 'flex';
+				panel.innerHTML = `
+					<div class="review-header-row">
+						<div class="review-header-title">AI Code Review</div>
+						<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>
+					</div>
+					<div class="review-summary-text">
+						${escapeHtml(state.message || 'No reviewable changes found in repository.')}
+					</div>
+					<div class="review-actions-row">
+						<button class="review-btn primary" onclick="runReviewAgain()">Check Again</button>
+					</div>
+				`;
+			} else if (state.status === 'error') {
+				panel.style.display = 'flex';
+				panel.innerHTML = `
+					<div class="review-header-row">
+						<div class="review-header-title" style="color: #ff7b72;">Review Failed</div>
+						<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>
+					</div>
+					<div class="review-summary-text" style="border-left-color: #ff7b72;">
+						${escapeHtml(state.error || 'Unknown error occurred.')}
+					</div>
+					<div class="review-actions-row">
+						<button class="review-btn primary" onclick="runReviewAgain()">Retry</button>
+						<button class="review-btn" onclick="dismissReview()">Dismiss</button>
+					</div>
+				`;
+			}
+		}
+
+		function toggleFinding(id) {
+			const card = document.getElementById(id);
+			if (card) card.classList.toggle('open');
+		}
+
+		function openFile(e, file, line) {
+			e.stopPropagation();
+			vscode.postMessage({ command: 'openFileAtLine', file: file, line: line });
+		}
+
+		function runReviewAgain() {
+			vscode.postMessage({ command: '${COMMAND_IDS.aiCodeReview}' });
+		}
+
+		function openReport() {
+			vscode.postMessage({ command: 'gitIQ.showCodeReviewReport' });
+		}
+
+		function dismissReview() {
+			const panel = document.getElementById('codeReviewPanel');
+			if (panel) panel.style.display = 'none';
+		}
+
+		function escapeHtml(text) {
+			if (!text) return '';
+			return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+		}
+
+		function escapeJs(text) {
+			if (!text) return '';
+			return String(text).replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'");
+		}
 	</script>
 </body>
 </html>`;

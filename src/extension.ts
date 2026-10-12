@@ -12,6 +12,7 @@ import { registerExportHistoryReportCommand } from './commands/exportHistoryRepo
 import { registerFetchCommand } from './commands/fetchCommand';
 import { registerGenerateCommitMessageCommand } from './commands/generateCommitMessageCommand';
 import { registerGeneratePullRequestCommand } from './commands/generatePullRequestCommand';
+import { registerAiCodeReviewCommand } from './commands/aiCodeReviewCommand';
 import { registerHelloCommand } from './commands/helloCommand';
 import { registerOpenBranchCommand } from './commands/openBranchCommand';
 import { registerOpenPullRequestPageCommand } from './commands/openPullRequestPageCommand';
@@ -36,6 +37,7 @@ import { CommitExplainProvider } from './providers/commitExplainProvider';
 import { GitDiffPreviewProvider } from './providers/gitDiffPreviewProvider';
 import { HistoryPreviewProvider } from './providers/historyPreviewProvider';
 import { PullRequestProvider } from './providers/pullRequestProvider';
+import { CodeReviewProvider } from './providers/codeReviewProvider';
 import { RepoInfoProvider } from './providers/repoInfoProvider';
 import { CommitMessageService } from './services/commitMessageService';
 import { CommitMessageValidator } from './services/commitMessageValidator';
@@ -44,6 +46,7 @@ import { HistoryService } from './services/historyService';
 import { LoggerService } from './services/loggerService';
 import { PromptBuilder } from './services/promptBuilder';
 import { PullRequestService } from './services/pullRequestService';
+import { CodeReviewService } from './services/codeReviewService';
 import { SettingsService } from './services/SettingsService';
 import { SidebarWebviewProvider } from './providers/sidebarWebviewProvider';
 import { registerLanguageModelTools } from './providers/languageModelTools';
@@ -103,12 +106,22 @@ export function activate(context: vscode.ExtensionContext): void {
 			loggerService
 		);
 
+		const codeReviewService = new CodeReviewService(
+			gitService,
+			settingsService,
+			providerFactory,
+			loggerService
+		);
+
+		const codeReviewProvider = new CodeReviewProvider();
+
 		// Register Virtual Document Content Providers
 		gitDiffPreviewProvider.register(context);
 		commitDetailsProvider.register(context);
 		commitExplainProvider.register(context);
 		repoInfoProvider.register(context);
 		pullRequestProvider.register(context);
+		codeReviewProvider.register(context);
 		historyPreviewProvider.register(context);
 
 		console.log('[GitIQ] Registering extension commands...');
@@ -181,15 +194,18 @@ export function activate(context: vscode.ExtensionContext): void {
 				void sidebarWebviewProvider.updateState();
 				loggerService?.info('GitIQ sidebar refreshed.');
 			}),
-			vscode.commands.registerCommand(COMMAND_IDS.aiCodeReview, () => {
-				void vscode.window.showInformationMessage(
-					'GitIQ: AI Code Review is planned for an upcoming release. Stay tuned!'
-				);
-				loggerService?.info('AI Code Review (planned) invoked.');
-			}),
 			vscode.workspace.onDidChangeWorkspaceFolders(() => {
 				void sidebarWebviewProvider.updateState();
 			})
+		);
+
+		// AI Code Review command
+		registerAiCodeReviewCommand(
+			context,
+			codeReviewService,
+			codeReviewProvider,
+			sidebarWebviewProvider,
+			loggerService
 		);
 
 		console.log('[GitIQ] All commands and sidebar registered successfully');

@@ -121,6 +121,50 @@ export class GitService {
 	}
 
 	/**
+	 * Reads the uncommitted working-tree changes (unstaged tracked modifications),
+	 * excluding generated files and lock files.
+	 */
+	public async getWorkingTreeDiff(workspacePath: string): Promise<StagedDiff> {
+		this.logger?.info('Git working-tree diff read started (excluding generated files and lock files)...');
+
+		try {
+			const { stdout } = await execFileAsync(
+				'git',
+				['diff', ...EXCLUDE_PATHSPECS],
+				{
+					cwd: workspacePath,
+					windowsHide: true,
+					maxBuffer: 20 * 1024 * 1024
+				}
+			);
+
+			const rawContent = stdout.toString();
+			const filteredContent = this.filterDiffContent(rawContent);
+			const trimmedContent = filteredContent.trim();
+
+			this.logger?.info(
+				`Git working-tree diff retrieved successfully. Raw size: ${rawContent.length} chars, Filtered size: ${trimmedContent.length} chars`
+			);
+
+			return {
+				content: trimmedContent,
+				hasChanges: trimmedContent.length > 0,
+				originalLength: rawContent.length,
+				filteredLength: trimmedContent.length
+			};
+		} catch (error: unknown) {
+			const details = error instanceof Error ? error.message : String(error);
+			this.logger?.warn(`Working-tree diff failed: ${details}`);
+			return {
+				content: '',
+				hasChanges: false,
+				originalLength: 0,
+				filteredLength: 0
+			};
+		}
+	}
+
+	/**
 	 * Executes `git commit -m "<message>"` in the specified workspace directory.
 	 */
 	public async commit(workspacePath: string, message: string): Promise<void> {
