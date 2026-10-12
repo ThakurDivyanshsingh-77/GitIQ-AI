@@ -40,42 +40,7 @@
   "bugs": {
     "url": "https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI/issues"
   },
-  "activationEvents": [
-    "onView:gitiq.sidebarView",
-    "onCommand:gitIQ.hello",
-    "onCommand:gitIQ.checkGitRepository",
-    "onCommand:gitIQ.previewGitDiff",
-    "onCommand:gitIQ.generateCommitMessage",
-    "onCommand:gitIQ.viewCommitHistory",
-    "onCommand:gitIQ.explainCommit",
-    "onCommand:gitIQ.copyCommitHash",
-    "onCommand:gitIQ.push",
-    "onCommand:gitIQ.pull",
-    "onCommand:gitIQ.fetch",
-    "onCommand:gitIQ.currentBranch",
-    "onCommand:gitIQ.repositoryInfo",
-    "onCommand:gitIQ.openRepository",
-    "onCommand:gitIQ.openBranch",
-    "onCommand:gitIQ.generatePullRequest",
-    "onCommand:gitIQ.copyPRTitle",
-    "onCommand:gitIQ.copyPRDescription",
-    "onCommand:gitIQ.copyEntirePullRequest",
-    "onCommand:gitIQ.savePullRequest",
-    "onCommand:gitIQ.openPullRequestPage",
-    "onCommand:gitIQ.searchCommitHistory",
-    "onCommand:gitIQ.commitStatistics",
-    "onCommand:gitIQ.topContributors",
-    "onCommand:gitIQ.commitActivity",
-    "onCommand:gitIQ.exportHistoryReport",
-    "onCommand:gitIQ.setApiKey",
-    "onCommand:gitIQ.updateApiKey",
-    "onCommand:gitIQ.removeApiKey",
-    "onCommand:gitIQ.selectModel",
-    "onCommand:gitIQ.selectProvider",
-    "onCommand:gitIQ.setGeminiApiKey",
-    "onCommand:gitIQ.refreshSidebar",
-    "onCommand:gitIQ.aiCodeReview"
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -264,7 +229,8 @@
         {
           "type": "webview",
           "id": "gitiq.sidebarView",
-          "name": "Dashboard"
+          "name": "Dashboard",
+          "icon": "resources/icon.svg"
         }
       ]
     },
