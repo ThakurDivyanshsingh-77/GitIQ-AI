@@ -105,4 +105,42 @@ test('Provider Selection - Gemini key storage and snapshot', async () => {
 	const snapshot = await service.getConfigurationSnapshot();
 	assert.equal(snapshot.provider, Provider.Gemini);
 	assert.equal(snapshot.apiKey, 'AIzaSyTestGeminiKey123');
+	assert.equal(snapshot.model, 'gemini-1.5-flash');
 });
+
+test('Provider Selection - Gemini throws provider-specific error when Gemini API key is missing', async () => {
+	const { service, setProvider } = createMockSettingsService();
+	setProvider(Provider.Gemini);
+
+	await assert.rejects(
+		async () => service.getConfigurationSnapshot(),
+		(err) => {
+			assert.ok(err instanceof ConfigurationError);
+			assert.match(err.message, /Missing Google Gemini API key/i);
+			assert.doesNotMatch(err.message, /Groq/i);
+			return true;
+		}
+	);
+});
+
+test('Provider Selection - Strict key isolation between Groq and Gemini', async () => {
+	const { service } = createMockSettingsService();
+
+	// Store only Groq key
+	await service.setApiKey('gsk_groq_secret_key_1', Provider.Groq);
+	assert.equal(await service.getApiKey(Provider.Groq), 'gsk_groq_secret_key_1');
+	assert.equal(await service.getApiKey(Provider.Gemini), '');
+
+	// Store Gemini key
+	await service.setApiKey('AIzaSy_gemini_secret_key_2', Provider.Gemini);
+	assert.equal(await service.getApiKey(Provider.Groq), 'gsk_groq_secret_key_1');
+	assert.equal(await service.getApiKey(Provider.Gemini), 'AIzaSy_gemini_secret_key_2');
+});
+
+test('Provider Selection - Provider-aware model resolution', () => {
+	const { service } = createMockSettingsService();
+	assert.equal(service.getModel(Provider.Gemini), 'gemini-1.5-flash');
+	assert.equal(service.getModel(Provider.Groq), 'llama-3.3-70b-versatile');
+	assert.equal(service.getModel(Provider.Ollama), 'llama3.2');
+});
+
