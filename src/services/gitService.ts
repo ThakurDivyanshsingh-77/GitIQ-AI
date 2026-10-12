@@ -455,7 +455,7 @@ export class GitService {
 		return 'main';
 	}
 
-	/** Returns the diff between the current branch and the default branch (`git diff origin/<default>...HEAD`). */
+	/** Returns the diff between the current branch and the default branch (`git diff origin/<default>...HEAD` or `<default>...HEAD`). */
 	public async getBranchDiff(workspacePath: string): Promise<string> {
 		const defaultBranch = await this.getDefaultBranch(workspacePath);
 		this.logger?.info(`Generating branch diff (origin/${defaultBranch}...HEAD)...`);
@@ -473,10 +473,26 @@ export class GitService {
 
 			const filtered = this.filterDiffContent(stdout.toString());
 			return filtered.trim();
-		} catch (error: unknown) {
-			const details = error instanceof Error ? error.message : String(error);
-			this.logger?.error(`Branch diff failed: ${details}`);
-			throw new GitCommitError(`Unable to compute branch diff: ${details}`);
+		} catch (remoteError: unknown) {
+			// Fall back to local branch diff if remote ref origin/<defaultBranch> does not exist
+			try {
+				this.logger?.info(`Falling back to local branch diff (${defaultBranch}...HEAD)...`);
+				const { stdout } = await execFileAsync(
+					'git',
+					['diff', `${defaultBranch}...HEAD`],
+					{
+						cwd: workspacePath,
+						windowsHide: true,
+						maxBuffer: 20 * 1024 * 1024
+					}
+				);
+				const filtered = this.filterDiffContent(stdout.toString());
+				return filtered.trim();
+			} catch {
+				const details = remoteError instanceof Error ? remoteError.message : String(remoteError);
+				this.logger?.error(`Branch diff failed: ${details}`);
+				throw new GitCommitError(`Unable to compute branch diff: ${details}`);
+			}
 		}
 	}
 
@@ -496,10 +512,24 @@ export class GitService {
 			);
 
 			return stdout.trim();
-		} catch (error: unknown) {
-			const details = error instanceof Error ? error.message : String(error);
-			this.logger?.error(`Branch commits fetch failed: ${details}`);
-			throw new GitCommitError(`Unable to fetch branch commits: ${details}`);
+		} catch (remoteError: unknown) {
+			// Fall back to local branch log if remote ref origin/<defaultBranch> does not exist
+			try {
+				this.logger?.info(`Falling back to local branch commits (${defaultBranch}..HEAD)...`);
+				const { stdout } = await execFileAsync(
+					'git',
+					['log', `${defaultBranch}..HEAD`, '--oneline'],
+					{
+						cwd: workspacePath,
+						windowsHide: true
+					}
+				);
+				return stdout.trim();
+			} catch {
+				const details = remoteError instanceof Error ? remoteError.message : String(remoteError);
+				this.logger?.error(`Branch commits fetch failed: ${details}`);
+				throw new GitCommitError(`Unable to fetch branch commits: ${details}`);
+			}
 		}
 	}
 

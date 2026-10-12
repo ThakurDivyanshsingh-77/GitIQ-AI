@@ -241,9 +241,9 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
   - Updated `SidebarWebviewProvider` with dynamic provider status badge and configuration actions.
   - Added providers: Groq API, GitHub Copilot, Google Gemini API, Ollama (offline local), and MCP Delegation.
 - [x] **Phase 5: Automated Testing & Verification**:
-  - Implemented 38 automated unit tests across 5 suites using Node's built-in test runner.
-  - 100% test pass rate (38 passed, 0 failed).
-  - Clean linting (`npm run lint`), compilation (`npm run compile`), and packaging (`vsce package` -> `gitiq-1.1.0.vsix` 475 KB).
+  - Implemented 45 automated unit tests across 6 suites using Node's built-in test runner.
+  - 100% test pass rate (45 passed, 0 failed).
+  - Clean linting (`npm run lint`), compilation (`npm run compile`), and packaging (`npm run package`).
 - [x] **Gemini Provider Architecture & Error Routing Bugfix**:
   - **Root Cause**: `generateCommitMessageCommand.ts` previously hardcoded Groq error messages on any `ConfigurationError` or `ProviderAuthenticationError`, and `setGeminiApiKeyCommand` did not auto-switch the active provider to Gemini. Additionally, `getModel()` was not provider-aware and passed Groq model IDs to the Gemini API.
   - **Fixes Applied**:
@@ -252,6 +252,18 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
     3. Replaced hardcoded Groq error handlers in `generateCommitMessageCommand.ts` with provider-aware dynamic error messages preserving `error.message`.
     4. Enhanced `GeminiProvider.ts` with official `x-goog-api-key` header authentication, model fallback protection, and precise Google 400 (`API_KEY_INVALID`), 403, 404, 429 error mapping.
     5. Added 10 tests across `test/geminiProvider.test.cjs` and `test/providerSelection.test.cjs` including real network HTTP verification against live Google Generative Language API.
+- [x] **Create Pull Request Command Root-Cause Fix**:
+  - **Root Cause**:
+    1. Blanket try/catch in `PullRequestService.generatePullRequest` intercepted all operational failures (`ProviderAuthenticationError`, `ProviderRateLimitError`, `ProviderTimeoutError`, `ConfigurationError`, `ProviderNetworkError`, `GitError`) and unconditionally threw `AI generated an incomplete Pull Request. Please try again.`, completely masking the real failure reasons.
+    2. Rigid section validation regexes in `validatePullRequest` rejected valid AI responses that formatted titles inline (`## Title: <title>`), used alternate section headers (`## Overview`, `## Changes`, `## Test Plan`), or returned JSON objects.
+    3. `git diff origin/<default>...HEAD` failed on repos lacking the remote tracking ref `origin/<default>`.
+  - **Fixes Applied**:
+    1. Added `isOperationalError()` filter in `PullRequestService` to immediately propagate authentication, rate-limiting, timeout, network, and Git errors without swallowing or retrying.
+    2. Added `tryParseJsonPullRequest()` to seamlessly extract and convert JSON-structured responses (both fenced and raw) into standardized Markdown.
+    3. Broadened `validatePullRequest` and `parsePullRequest` to support flexible headings (`Summary|Overview|Description|Changes`, `Testing|Test Plan`, `Checklist`), inline titles, and actionable validation failure descriptions.
+    4. Updated `GitService.getBranchDiff` and `GitService.getBranchCommits` with local branch fallback (`${defaultBranch}...HEAD`) when remote origin refs are not found.
+    5. Implemented `test/pullRequestService.test.cjs` covering all 7 failure scenarios (valid markdown, fenced JSON, missing fields, empty AI response, malformed JSON, provider rate limit/timeout/auth propagation, and Git context edge cases).
+    6. Verified 100% test pass rate (45/45 tests green) and clean build/package outputs.
 
 ---
 

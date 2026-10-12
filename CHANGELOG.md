@@ -20,8 +20,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Added Command Palette switcher `GitIQ: Select AI Provider` (`gitIQ.selectProvider`) with configured status indicators.
   - Added Command Palette command `GitIQ: Set Gemini API Key` (`gitIQ.setGeminiApiKey`).
   - Added active provider badge and Quick Action buttons in the Sidebar Webview dashboard.
-- **Documentation & Verification**:
 ### Fixed
+- **Create Pull Request Generation & Error Handling (Root-Cause Fix)**:
+  - **Error Propagation**: Eliminated blanket catch blocks in `PullRequestService` that masked operational errors (auth failures, invalid API keys, rate limits, timeouts, and network errors) as generic "AI generated an incomplete Pull Request" errors. Operational errors are now rethrown immediately with precise, actionable messages.
+  - **Robust Schema & Multi-Format Parsing**: Added automatic detection and parsing for JSON structured outputs (`tryParseJsonPullRequest`) from models wrapped in Markdown code fences (` ```json `), raw JSON objects, or standard Markdown.
+  - **Flexible Section Headings**: Replaced rigid regex matching with support for flexible section headings (`## Summary`, `## Overview`, `## Description`, `## Changes`, `## Testing`, `## Test Plan`, `## Checklist`) and inline title formats (`## Title: <title>`, `# Pull Request: <title>`).
+  - **Git Branch Ref Fallback**: Updated `GitService.getBranchDiff` and `GitService.getBranchCommits` to attempt `origin/${defaultBranch}...HEAD` and automatically fall back to local `${defaultBranch}...HEAD` when remote tracking refs are absent.
+  - **Controlled Validation Retries**: Limited retries to at most one attempt with clear validation error diagnostics if both attempts fail.
+  - **Unit Testing**: Added 7 comprehensive test scenarios in `test/pullRequestService.test.cjs` expanding the automated test suite to 45 tests (100% passing).
 - **Gemini Provider Configuration & Error Routing**:
   - Fixed false-positive Groq error prompt ("API key missing or invalid. Please configure your Groq API key in VS Code Settings.") when using Google Gemini.
   - Fixed `setGeminiApiKey` to automatically switch the active provider to Gemini and refresh the sidebar UI.
