@@ -241,9 +241,17 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
   - Updated `SidebarWebviewProvider` with dynamic provider status badge and configuration actions.
   - Added providers: Groq API, GitHub Copilot, Google Gemini API, Ollama (offline local), and MCP Delegation.
 - [x] **Phase 5: Automated Testing & Verification**:
-  - Implemented 28 automated unit tests across 4 suites using Node's built-in test runner.
-  - 100% test pass rate (28 passed, 0 failed).
-  - Clean linting (`npm run lint`), compilation (`npm run compile`), and packaging (`vsce package` -> `gitiq-1.1.0.vsix` 470 KB).
+  - Implemented 38 automated unit tests across 5 suites using Node's built-in test runner.
+  - 100% test pass rate (38 passed, 0 failed).
+  - Clean linting (`npm run lint`), compilation (`npm run compile`), and packaging (`vsce package` -> `gitiq-1.1.0.vsix` 475 KB).
+- [x] **Gemini Provider Architecture & Error Routing Bugfix**:
+  - **Root Cause**: `generateCommitMessageCommand.ts` previously hardcoded Groq error messages on any `ConfigurationError` or `ProviderAuthenticationError`, and `setGeminiApiKeyCommand` did not auto-switch the active provider to Gemini. Additionally, `getModel()` was not provider-aware and passed Groq model IDs to the Gemini API.
+  - **Fixes Applied**:
+    1. Made `getModel(provider)` and `setModel(model, provider)` dynamically resolve provider-specific models (`gitIQ.geminiModel` default `gemini-1.5-flash`, `gitIQ.model` default `llama-3.3-70b-versatile`).
+    2. Updated `setGeminiApiKeyCommand` to auto-activate the Gemini provider and refresh the sidebar UI.
+    3. Replaced hardcoded Groq error handlers in `generateCommitMessageCommand.ts` with provider-aware dynamic error messages preserving `error.message`.
+    4. Enhanced `GeminiProvider.ts` with official `x-goog-api-key` header authentication, model fallback protection, and precise Google 400 (`API_KEY_INVALID`), 403, 404, 429 error mapping.
+    5. Added 10 tests across `test/geminiProvider.test.cjs` and `test/providerSelection.test.cjs` including real network HTTP verification against live Google Generative Language API.
 
 ---
 
@@ -254,7 +262,7 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
 - [ ] **Custom Prompt Templates**: Configurable commit styles and PR templates.
 - [ ] **Source Control UI Integration**: Inline action button in VS Code SCM title bar.
 - [x] **Multi-Provider Support**: Implemented Copilot, Gemini, Ollama, and MCP.
-- [x] **Automated Test Suite**: Implemented 28 tests in `test/`.
+- [x] **Automated Test Suite**: Implemented 38 tests in `test/`.
 
 ### Known Issues
 - *None.*
