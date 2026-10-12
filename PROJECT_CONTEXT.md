@@ -46,6 +46,7 @@ The codebase follows a **Service-Oriented & Provider Pattern** architecture:
 src/
 ├── extension.ts                      # Extension lifecycle, Composition Root, & MCP Tool registration
 ├── commands/                         # VS Code Command Handlers
+│   ├── aiCodeReviewCommand.ts        # AI code review workflow orchestration
 │   ├── checkGitRepositoryCommand.ts  # Workspace Git verification
 │   ├── commitActivityCommand.ts      # Render 7-day commit activity table
 │   ├── commitStatisticsCommand.ts    # Collect repository statistics summary
@@ -81,10 +82,12 @@ src/
 │   ├── gitIqMcpServer.ts             # Core MCP tool definitions & execution engine
 │   └── server.ts                     # Standalone Stdio JSON-RPC 2.0 MCP server runner
 ├── models/                           # Domain Data Models
+│   ├── codeReviewModels.ts           # Interfaces for ReviewFinding, ReviewSummary, CodeReviewResult
 │   └── historyModels.ts              # Interfaces for SearchResultCommit, ContributorStat, etc.
 ├── providers/                        # AI & Virtual Document Providers
 │   ├── AIProvider.ts                 # Abstract contract interface for AI services
 │   ├── AIProviderFactory.ts          # Multi-provider resolution factory (GitIQAIProviderFactory)
+│   ├── codeReviewProvider.ts         # Read-only in-memory Code Review markdown provider
 │   ├── commitDetailsProvider.ts      # Read-only commit detail documents
 │   ├── commitExplainProvider.ts      # Read-only AI explanation documents
 │   ├── GeminiProvider.ts             # Google Gemini REST API provider
@@ -100,6 +103,7 @@ src/
 │   ├── sidebarWebviewProvider.ts    # Modern WebviewViewProvider with card dashboard UI
 │   └── VSCodeLanguageModelProvider.ts# GitHub Copilot (vscode.lm) Language Model provider
 ├── services/                         # Core Business Logic Services
+│   ├── codeReviewService.ts          # Multi-file change detection, diff chunking, review execution
 │   ├── commitMessageService.ts       # Orchestrates Diff -> Prompt -> AI -> Validator
 │   ├── commitMessageValidator.ts     # Validates AI response format
 │   ├── configService.ts              # Typed VS Code configuration manager
@@ -264,17 +268,33 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
     4. Updated `GitService.getBranchDiff` and `GitService.getBranchCommits` with local branch fallback (`${defaultBranch}...HEAD`) when remote origin refs are not found.
     5. Implemented `test/pullRequestService.test.cjs` covering all 7 failure scenarios (valid markdown, fenced JSON, missing fields, empty AI response, malformed JSON, provider rate limit/timeout/auth propagation, and Git context edge cases).
     6. Verified 100% test pass rate (45/45 tests green) and clean build/package outputs.
+- [x] **AI Code Review Feature (Fully Functional Implementation)**:
+  - **Architecture & Service**: Implemented `CodeReviewService` (`src/services/codeReviewService.ts`), data models (`src/models/codeReviewModels.ts`), and command handler (`src/commands/aiCodeReviewCommand.ts`).
+  - **Change Detection Hierarchy**: Identifies reviewable changes in priority order:
+    1. Uncommitted working-tree changes (`getWorkingTreeDiff`)
+    2. Staged changes (`getStagedDiff`)
+    3. Branch changes compared against default branch (`getBranchDiff`)
+  - **Diff Chunking & Context Safety**: Automatically partitions large diffs by file (`MAX_DIFF_CHUNK_CHARS = 24k`) to avoid model token exhaustion and silent truncation of modified files.
+  - **Finding Schema & Validation**: Analyzes code for critical bugs, security vulnerabilities, performance bottlenecks, broken logic, error handling, and maintainability. Normalizes findings into typed severities (`Critical`, `High`, `Medium`, `Low`), categories, line ranges, problem explanations, impacts, recommended fixes, and optional code suggestions.
+  - **Interactive Dashboard UI**:
+    - Live loading state with active diff target indication.
+    - Severity breakdown count badges (`Critical`, `High`, `Medium`, `Low`).
+    - Expandable finding cards with problem, impact, recommended fix, and code block.
+    - 1-click file navigation (`openFileAtLine`) with safe line clamping.
+    - Empty state when no changes exist, and error state with Retry action.
+  - **Virtual Markdown Report**: In-memory read-only report provider (`gitiq-code-review`) and command `gitIQ.showCodeReviewReport`.
+  - **Automated Test Suite**: Added 10 unit tests in `test/codeReviewService.test.cjs` expanding the automated test suite to 55 tests (100% passing).
 
 ---
 
 ## 7. Pending Tasks & Known Issues
 
 ### Pending Tasks / Roadmap
-- [ ] **AI Code Review**: Automated multi-file review for staged changes.
+- [x] **AI Code Review**: Automated multi-file review for staged/working-tree/branch changes.
 - [ ] **Custom Prompt Templates**: Configurable commit styles and PR templates.
 - [ ] **Source Control UI Integration**: Inline action button in VS Code SCM title bar.
 - [x] **Multi-Provider Support**: Implemented Copilot, Gemini, Ollama, and MCP.
-- [x] **Automated Test Suite**: Implemented 38 tests in `test/`.
+- [x] **Automated Test Suite**: Implemented 55 tests across 7 test suites in `test/`.
 
 ### Known Issues
 - *None.*

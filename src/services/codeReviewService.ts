@@ -26,7 +26,7 @@ import {
 const MAX_DIFF_CHUNK_CHARS = 24000;
 
 /** Valid categories for review findings. */
-const VALID_CATEGORIES: readonly ReviewCategory[] = [
+export const VALID_CATEGORIES: readonly ReviewCategory[] = [
 	'Bug',
 	'Security',
 	'Performance',
@@ -35,7 +35,7 @@ const VALID_CATEGORIES: readonly ReviewCategory[] = [
 ];
 
 /** Valid severities for review findings in priority order. */
-const VALID_SEVERITIES: readonly ReviewSeverity[] = [
+export const VALID_SEVERITIES: readonly ReviewSeverity[] = [
 	'Critical',
 	'High',
 	'Medium',

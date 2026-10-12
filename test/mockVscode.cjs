@@ -7,8 +7,43 @@ const mockVscode = {
 		Workspace: 2,
 		WorkspaceFolder: 3
 	},
+	Position: class {
+		constructor(line, character) {
+			this.line = line;
+			this.character = character;
+		}
+	},
+	Range: class {
+		constructor(start, end) {
+			this.start = start;
+			this.end = end;
+		}
+	},
+	Selection: class {
+		constructor(anchor, active) {
+			this.anchor = anchor;
+			this.active = active;
+		}
+	},
+	TextEditorRevealType: {
+		Default: 0,
+		InCenter: 1,
+		InCenterIfOutsideViewport: 2,
+		AtTop: 3
+	},
+	Uri: {
+		file: (f) => ({ fsPath: f, path: f, toString: () => f }),
+		from: (o) => ({ ...o, toString: () => `${o.scheme}://${o.path}` })
+	},
 	workspace: {
 		workspaceFolders: [],
+		openTextDocument: async (uri) => ({
+			uri,
+			lineCount: 100,
+			lineAt: (line) => ({ text: `line ${line}` })
+		}),
+		registerTextDocumentContentProvider: () => ({ dispose: () => {} }),
+		setTextDocumentLanguage: async () => {},
 		getConfiguration: () => ({
 			get: () => undefined,
 			update: async () => {}
@@ -21,6 +56,12 @@ const mockVscode = {
 		showErrorMessage: async () => undefined,
 		showQuickPick: async () => undefined,
 		showInputBox: async () => undefined,
+		showTextDocument: async (doc) => ({
+			document: doc,
+			selection: null,
+			revealRange: () => {}
+		}),
+		withProgress: async (opts, task) => task({ report: () => {} }),
 		registerWebviewViewProvider: () => ({ dispose: () => {} })
 	},
 	commands: {

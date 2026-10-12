@@ -1157,162 +1157,150 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 		});
 
 		function renderCodeReviewState(state) {
-			const panel = document.getElementById('codeReviewPanel');
+			var panel = document.getElementById('codeReviewPanel');
 			if (!panel) return;
 
 			if (state.status === 'loading') {
 				panel.style.display = 'flex';
-				panel.innerHTML = `
-					<div class="review-header-row">
-						<div class="review-header-title">
-							<div class="spinner"></div>
-							AI Code Review
-						</div>
-						<div class="review-target-badge">${escapeHtml(state.targetLabel || 'Analyzing...')}</div>
-					</div>
-					<div class="review-summary-text">
-						Inspecting diff changes for security, bugs, logic, and performance issues...
-					</div>
-				`;
+				panel.innerHTML =
+					'<div class="review-header-row">' +
+						'<div class="review-header-title">' +
+							'<div class="spinner"></div> AI Code Review' +
+						'</div>' +
+						'<div class="review-target-badge">' + escapeHtml(state.targetLabel || 'Analyzing...') + '</div>' +
+					'</div>' +
+					'<div class="review-summary-text">' +
+						'Inspecting diff changes for security, bugs, logic, and performance issues...' +
+					'</div>';
 			} else if (state.status === 'success' && state.result) {
-				const r = state.result;
-				const sum = r.summary;
+				var r = state.result;
+				var sum = r.summary;
 				panel.style.display = 'flex';
 
-				let findingsHtml = '';
+				var findingsHtml = '';
 				if (r.findings.length === 0) {
-					findingsHtml = `
-						<div style="padding: 12px; text-align: center; color: var(--accent-green); font-size: 12px;">
-							✓ No issues detected in ${escapeHtml(sum.targetLabel)}!
-						</div>
-					`;
+					findingsHtml =
+						'<div style="padding: 12px; text-align: center; color: var(--accent-green); font-size: 12px;">' +
+							'✓ No issues detected in ' + escapeHtml(sum.targetLabel) + '!' +
+						'</div>';
 				} else {
-					findingsHtml = r.findings.map(f => {
-						const sevClass = (f.severity || 'Medium').toLowerCase();
-						const lineText = f.line ? (f.endLine && f.endLine !== f.line ? ':' + f.line + '-' + f.endLine : ':' + f.line) : '';
-						const locText = escapeHtml(f.file) + lineText;
+					findingsHtml = r.findings.map(function(f) {
+						var sevClass = (f.severity || 'Medium').toLowerCase();
+						var lineText = f.line ? (f.endLine && f.endLine !== f.line ? ':' + f.line + '-' + f.endLine : ':' + f.line) : '';
+						var locText = escapeHtml(f.file) + lineText;
 
-						let detailsHtml = `
-							<div class="finding-detail-section">
-								<div class="finding-detail-label">Problem</div>
-								<div>${escapeHtml(f.explanation)}</div>
-							</div>
-							<div class="finding-detail-section">
-								<div class="finding-detail-label">Why it matters</div>
-								<div>${escapeHtml(f.impact)}</div>
-							</div>
-							<div class="finding-detail-section">
-								<div class="finding-detail-label">Recommended Fix</div>
-								<div>${escapeHtml(f.recommendation)}</div>
-							</div>
-						`;
+						var detailsHtml =
+							'<div class="finding-detail-section">' +
+								'<div class="finding-detail-label">Problem</div>' +
+								'<div>' + escapeHtml(f.explanation) + '</div>' +
+							'</div>' +
+							'<div class="finding-detail-section">' +
+								'<div class="finding-detail-label">Why it matters</div>' +
+								'<div>' + escapeHtml(f.impact) + '</div>' +
+							'</div>' +
+							'<div class="finding-detail-section">' +
+								'<div class="finding-detail-label">Recommended Fix</div>' +
+								'<div>' + escapeHtml(f.recommendation) + '</div>' +
+							'</div>';
 
 						if (f.codeSuggestion) {
-							detailsHtml += `
-								<div class="finding-detail-section">
-									<div class="finding-detail-label">Suggested Code</div>
-									<div class="finding-code-block">${escapeHtml(f.codeSuggestion)}</div>
-								</div>
-							`;
-						}
-
-						return `
-							<div class="finding-card" id="${f.id}">
-								<div class="finding-header" onclick="toggleFinding('${f.id}')">
-									<div class="finding-title-row">
-										<span class="finding-title">${escapeHtml(f.title)}</span>
-										<span class="severity-pill ${sevClass}">${escapeHtml(f.severity)}</span>
-									</div>
-									<div class="finding-meta">
-										<span class="finding-file-link" onclick="openFile(event, '${escapeJs(f.file)}', ${f.line || 1})">
-											📄 ${locText}
-										</span>
-										<span>•</span>
-										<span>${escapeHtml(f.category)}</span>
-										${f.confidence === 'Uncertain' ? '<span>• <i>(Uncertain)</i></span>' : ''}
-									</div>
-								</div>
-								<div class="finding-details">
-									${detailsHtml}
-								</div>
-							</div>
-						`;
+							detailsHtml +=
+								'<div class="finding-detail-section">' +
+									'<div class="finding-detail-label">Suggested Code</div>' +
+									'<div class="finding-code-block">' + escapeHtml(f.codeSuggestion) + '</div>' +
+								'</div>';
+											return (
+							'<div class="finding-card" id="' + f.id + '">' +
+								'<div class="finding-header" onclick="toggleFinding(this)">' +
+									'<div class="finding-title-row">' +
+										'<span class="finding-title">' + escapeHtml(f.title) + '</span>' +
+										'<span class="severity-pill ' + sevClass + '">' + escapeHtml(f.severity) + '</span>' +
+									'</div>' +
+									'<div class="finding-meta">' +
+										'<span class="finding-file-link" data-file="' + escapeHtml(f.file) + '" data-line="' + (f.line || 1) + '" onclick="openFile(event, this)">' +
+											'📄 ' + locText +
+										'</span>' +
+										'<span>•</span>' +
+										'<span>' + escapeHtml(f.category) + '</span>' +
+										(f.confidence === 'Uncertain' ? '<span>• <i>(Uncertain)</i></span>' : '') +
+									'</div>' +
+								'</div>' +
+								'<div class="finding-details">' +
+									detailsHtml +
+								'</div>' +
+							'</div>'
+						);
 					}).join('');
 				}
 
-				panel.innerHTML = `
-					<div class="review-header-row">
-						<div class="review-header-title">
-							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-							Review Results
-						</div>
-						<div style="display: flex; align-items: center; gap: 6px;">
-							<div class="review-target-badge">${escapeHtml(sum.targetLabel)}</div>
-							<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>
-						</div>
-					</div>
-
-					<div class="severity-counts">
-						<span class="severity-pill critical">Critical: ${sum.criticalCount}</span>
-						<span class="severity-pill high">High: ${sum.highCount}</span>
-						<span class="severity-pill medium">Medium: ${sum.mediumCount}</span>
-						<span class="severity-pill low">Low: ${sum.lowCount}</span>
-					</div>
-
-					<div class="review-summary-text">${escapeHtml(sum.overallSummary)}</div>
-
-					<div class="findings-list">
-						${findingsHtml}
-					</div>
-
-					<div class="review-actions-row">
-						<button class="review-btn" onclick="runReviewAgain()">
-							↻ Re-run
-						</button>
-						<button class="review-btn primary" onclick="openReport()">
-							Open Report
-						</button>
-					</div>
-				`;
+				panel.innerHTML =
+					'<div class="review-header-row">' +
+						'<div class="review-header-title">' +
+							'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>' +
+							' Review Results' +
+						'</div>' +
+						'<div style="display: flex; align-items: center; gap: 6px;">' +
+							'<div class="review-target-badge">' + escapeHtml(sum.targetLabel) + '</div>' +
+							'<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>' +
+						</div>' +
+					'</div>' +
+					'<div class="severity-counts">' +
+						'<span class="severity-pill critical">Critical: ' + sum.criticalCount + '</span>' +
+						'<span class="severity-pill high">High: ' + sum.highCount + '</span>' +
+						'<span class="severity-pill medium">Medium: ' + sum.mediumCount + '</span>' +
+						'<span class="severity-pill low">Low: ' + sum.lowCount + '</span>' +
+					'</div>' +
+					'<div class="review-summary-text">' + escapeHtml(sum.overallSummary) + '</div>' +
+					'<div class="findings-list">' +
+						findingsHtml +
+					'</div>' +
+					'<div class="review-actions-row">' +
+						'<button class="review-btn" onclick="runReviewAgain()">' +
+							'↻ Re-run' +
+						'</button>' +
+						'<button class="review-btn primary" onclick="openReport()">' +
+							'Open Report' +
+						'</button>' +
+					'</div>';
 			} else if (state.status === 'empty') {
 				panel.style.display = 'flex';
-				panel.innerHTML = `
-					<div class="review-header-row">
-						<div class="review-header-title">AI Code Review</div>
-						<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>
-					</div>
-					<div class="review-summary-text">
-						${escapeHtml(state.message || 'No reviewable changes found in repository.')}
-					</div>
-					<div class="review-actions-row">
-						<button class="review-btn primary" onclick="runReviewAgain()">Check Again</button>
-					</div>
-				`;
+				panel.innerHTML =
+					'<div class="review-header-row">' +
+						'<div class="review-header-title">AI Code Review</div>' +
+						'<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>' +
+					'</div>' +
+					'<div class="review-summary-text">' +
+						escapeHtml(state.message || 'No reviewable changes found in repository.') +
+					'</div>' +
+					'<div class="review-actions-row">' +
+						'<button class="review-btn primary" onclick="runReviewAgain()">Check Again</button>' +
+					'</div>';
 			} else if (state.status === 'error') {
 				panel.style.display = 'flex';
-				panel.innerHTML = `
-					<div class="review-header-row">
-						<div class="review-header-title" style="color: #ff7b72;">Review Failed</div>
-						<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>
-					</div>
-					<div class="review-summary-text" style="border-left-color: #ff7b72;">
-						${escapeHtml(state.error || 'Unknown error occurred.')}
-					</div>
-					<div class="review-actions-row">
-						<button class="review-btn primary" onclick="runReviewAgain()">Retry</button>
-						<button class="review-btn" onclick="dismissReview()">Dismiss</button>
-					</div>
-				`;
+				panel.innerHTML =
+					'<div class="review-header-row">' +
+						'<div class="review-header-title" style="color: #ff7b72;">Review Failed</div>' +
+						'<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>' +
+					'</div>' +
+					'<div class="review-summary-text" style="border-left-color: #ff7b72;">' +
+						escapeHtml(state.error || 'Unknown error occurred.') +
+					'</div>' +
+					'<div class="review-actions-row">' +
+						'<button class="review-btn primary" onclick="runReviewAgain()">Retry</button>' +
+						'<button class="review-btn" onclick="dismissReview()">Dismiss</button>' +
+					'</div>';
 			}
 		}
 
-		function toggleFinding(id) {
-			const card = document.getElementById(id);
+		function toggleFinding(headerEl) {
+			var card = headerEl ? headerEl.closest('.finding-card') : null;
 			if (card) card.classList.toggle('open');
 		}
 
-		function openFile(e, file, line) {
+		function openFile(e, linkEl) {
 			e.stopPropagation();
+			var file = linkEl.getAttribute('data-file');
+			var line = parseInt(linkEl.getAttribute('data-line') || '1', 10);
 			vscode.postMessage({ command: 'openFileAtLine', file: file, line: line });
 		}
 
@@ -1325,7 +1313,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 		}
 
 		function dismissReview() {
-			const panel = document.getElementById('codeReviewPanel');
+			var panel = document.getElementById('codeReviewPanel');
 			if (panel) panel.style.display = 'none';
 		}
 
@@ -1336,7 +1324,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 
 		function escapeJs(text) {
 			if (!text) return '';
-			return String(text).replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'");
+			return String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 		}
 	</script>
 </body>

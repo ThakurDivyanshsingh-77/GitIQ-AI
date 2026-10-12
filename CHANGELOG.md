@@ -17,9 +17,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Native VS Code Language Model Tool registration via `vscode.lm.registerTool`.
   - Clear separation between suggestions and executions (`status: "SUGGESTION_ONLY"`, `executed: false`).
 - **Interactive Provider Selection UI**:
-  - Added Command Palette switcher `GitIQ: Select AI Provider` (`gitIQ.selectProvider`) with configured status indicators.
-  - Added Command Palette command `GitIQ: Set Gemini API Key` (`gitIQ.setGeminiApiKey`).
-  - Added active provider badge and Quick Action buttons in the Sidebar Webview dashboard.
+- **Interactive AI Code Review (Fully Functional)**:
+  - **Change Detection Hierarchy**: Analyzes uncommitted working-tree changes first, then staged changes, and falls back to comparing the active branch against base branch.
+  - **Large Diff Partitioning**: Safely splits multi-file diffs into context-bounded chunks (`MAX_DIFF_CHUNK_CHARS = 24k`) to avoid context window truncation and loss of critical changes.
+  - **Structured Review Findings**: Analyzes changes for critical bugs, security vulnerabilities, performance bottlenecks, broken logic, unhandled errors, and maintainability issues. Formats findings with severity (`Critical`, `High`, `Medium`, `Low`), category, file, line range, problem explanation, impact ("Why it matters"), recommended fix, and code suggestion.
+  - **Interactive Sidebar Results Panel**: Integrated into the GitIQ dashboard with visible loading spinner, target indicator, severity badges, expandable finding cards, 1-click file navigation (`openFileAtLine`) with safe line clamping, Retry action for failures, and clean empty state.
+  - **Virtual Markdown Report (`CodeReviewProvider`)**: In-memory read-only report provider (`gitiq-code-review`) and command `gitIQ.showCodeReviewReport`.
+  - **Automated Test Coverage**: Added 10 tests in `test/codeReviewService.test.cjs` covering working tree, staged, no changes, multi-file extraction, chunking, valid JSON parsing, malformed fallback, missing API key, timeout/rate-limit propagation, and file navigation line clamping.
 ### Fixed
 - **Create Pull Request Generation & Error Handling (Root-Cause Fix)**:
   - **Error Propagation**: Eliminated blanket catch blocks in `PullRequestService` that masked operational errors (auth failures, invalid API keys, rate limits, timeouts, and network errors) as generic "AI generated an incomplete Pull Request" errors. Operational errors are now rethrown immediately with precise, actionable messages.

@@ -210,9 +210,15 @@
       },
       {
         "command": "gitIQ.aiCodeReview",
-        "title": "AI Code Review (Planned)",
+        "title": "AI Code Review",
         "category": "GitIQ",
-        "icon": "$(beaker)"
+        "icon": "$(shield)"
+      },
+      {
+        "command": "gitIQ.showCodeReviewReport",
+        "title": "Show Code Review Report",
+        "category": "GitIQ",
+        "icon": "$(book)"
       }
     ],
     "viewsContainers": {
