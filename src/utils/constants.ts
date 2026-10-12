@@ -100,7 +100,8 @@ export const COMMAND_IDS = {
 	refreshSidebar: 'gitIQ.refreshSidebar',
 	aiCodeReview: 'gitIQ.aiCodeReview',
 	selectProvider: 'gitIQ.selectProvider',
-	setGeminiApiKey: 'gitIQ.setGeminiApiKey'
+	setGeminiApiKey: 'gitIQ.setGeminiApiKey',
+	selectRepository: 'gitIQ.selectRepository'
 } as const;
 
 /** Legacy command IDs for backwards compatibility. */
@@ -138,7 +139,8 @@ export const LEGACY_COMMAND_IDS: Record<keyof typeof COMMAND_IDS, string> = {
 	refreshSidebar: 'commitPilotAI.refreshSidebar',
 	aiCodeReview: 'commitPilotAI.aiCodeReview',
 	selectProvider: 'commitPilotAI.selectProvider',
-	setGeminiApiKey: 'commitPilotAI.setGeminiApiKey'
+	setGeminiApiKey: 'commitPilotAI.setGeminiApiKey',
+	selectRepository: 'commitPilotAI.selectRepository'
 };
 
 /** Human-readable names used when presenting provider choices in UI. */

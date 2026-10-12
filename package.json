@@ -219,6 +219,12 @@
         "title": "Show Code Review Report",
         "category": "GitIQ",
         "icon": "$(book)"
+      },
+      {
+        "command": "gitIQ.selectRepository",
+        "title": "Select Git Repository",
+        "category": "GitIQ",
+        "icon": "$(repo)"
       }
     ],
     "viewsContainers": {

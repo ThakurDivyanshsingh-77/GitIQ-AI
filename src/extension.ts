@@ -48,6 +48,7 @@ import { PromptBuilder } from './services/promptBuilder';
 import { PullRequestService } from './services/pullRequestService';
 import { CodeReviewService } from './services/codeReviewService';
 import { SettingsService } from './services/SettingsService';
+import { RepositoryDetector } from './services/repositoryDetector';
 import { SidebarWebviewProvider } from './providers/sidebarWebviewProvider';
 import { registerLanguageModelTools } from './providers/languageModelTools';
 import { COMMAND_IDS } from './utils/constants';
@@ -172,15 +173,21 @@ export function activate(context: vscode.ExtensionContext): void {
 		// Native VS Code Language Model Tools for GitHub Copilot Chat
 		registerLanguageModelTools(context);
 
+		// Git repository discovery and lifecycle management
+		const repositoryDetector = new RepositoryDetector(gitService, loggerService);
+		context.subscriptions.push(repositoryDetector);
+
 		// GitIQ Activity Bar Modern Sidebar Webview View
 		const sidebarWebviewProvider = new SidebarWebviewProvider(
 			context.extensionUri,
 			gitService,
 			settingsService,
-			loggerService
+			loggerService,
+			repositoryDetector
 		);
 
 		context.subscriptions.push(
+			sidebarWebviewProvider,
 			vscode.window.registerWebviewViewProvider(
 				SidebarWebviewProvider.viewType,
 				sidebarWebviewProvider,
@@ -190,14 +197,17 @@ export function activate(context: vscode.ExtensionContext): void {
 					}
 				}
 			),
-			vscode.commands.registerCommand(COMMAND_IDS.refreshSidebar, () => {
-				void sidebarWebviewProvider.updateState();
+			vscode.commands.registerCommand(COMMAND_IDS.refreshSidebar, async () => {
+				await repositoryDetector.refresh();
 				loggerService?.info('GitIQ sidebar refreshed.');
 			}),
-			vscode.workspace.onDidChangeWorkspaceFolders(() => {
-				void sidebarWebviewProvider.updateState();
+			vscode.commands.registerCommand(COMMAND_IDS.selectRepository, async () => {
+				await repositoryDetector.selectActiveRepository();
 			})
 		);
+
+		// Kick off initial detection asynchronously
+		void repositoryDetector.detectRepositories();
 
 		// AI Code Review command
 		registerAiCodeReviewCommand(

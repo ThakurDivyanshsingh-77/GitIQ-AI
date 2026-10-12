@@ -2,15 +2,31 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { GitService } from '../services/gitService';
 import type { LoggerService } from '../services/loggerService';
+import type { RepositoryDetector, RepositoryDetectionState } from '../services/repositoryDetector';
 import type { SettingsService } from '../services/SettingsService';
 import { COMMAND_IDS } from '../utils/constants';
 
-interface RepoState {
+export interface RepoState {
 	hasWorkspace: boolean;
 	isGitRepo: boolean;
 	repoName: string;
 	branch: string;
 	remoteUrl?: string;
+	activeProvider?: string;
+}
+
+export interface WebviewRepoState {
+	status: 'detecting' | 'detected' | 'no-repo' | 'git-unavailable' | 'detection-failed';
+	hasWorkspace: boolean;
+	isGitRepo: boolean;
+	repoName: string;
+	branch: string;
+	remoteUrl?: string;
+	stagedCount?: number;
+	uncommittedCount?: number;
+	statusSummary?: string;
+	totalReposCount?: number;
+	errorMessage?: string;
 	activeProvider?: string;
 }
 
@@ -21,17 +37,27 @@ interface RepoState {
  * - 2x2 Quick Actions grid (AI Commit, Code Review, Create PR, History)
  * - Expandable All Tools section (Git & GitHub, Pull Requests, Commit Analytics, AI Settings)
  */
-export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
+export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
 	public static readonly viewType = 'gitiq.sidebarView';
 
 	private _view?: vscode.WebviewView;
+	private readonly _disposables: vscode.Disposable[] = [];
 
 	public constructor(
 		private readonly extensionUri: vscode.Uri,
 		private readonly gitService?: GitService,
 		private readonly settingsService?: SettingsService,
-		private readonly logger?: LoggerService
-	) {}
+		private readonly logger?: LoggerService,
+		private readonly repositoryDetector?: RepositoryDetector
+	) {
+		if (this.repositoryDetector) {
+			this._disposables.push(
+				this.repositoryDetector.onDidChangeState((detState) => {
+					void this.pushRepoState(detState);
+				})
+			);
+		}
+	}
 
 	public resolveWebviewView(webviewView: vscode.WebviewView): void {
 		this._view = webviewView;
@@ -48,8 +74,30 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 				return;
 			}
 
+			if (data.command === 'webviewReady') {
+				// Immediate handshake: send current state as soon as webview listener is active
+				if (this.repositoryDetector) {
+					await this.pushRepoState();
+					void this.repositoryDetector.detectRepositories();
+				} else {
+					await this.updateState();
+				}
+				return;
+			}
+
 			if (data.command === 'refresh') {
-				await this.updateState();
+				if (this.repositoryDetector) {
+					await this.repositoryDetector.refresh();
+				} else {
+					await this.updateState();
+				}
+				return;
+			}
+
+			if (data.command === 'selectRepo') {
+				if (this.repositoryDetector) {
+					await this.repositoryDetector.selectActiveRepository();
+				}
 				return;
 			}
 
@@ -71,8 +119,12 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 			}
 		});
 
-		// Push initial state once webview is ready
-		void this.updateState();
+		// Push initial state
+		if (this.repositoryDetector) {
+			void this.pushRepoState();
+		} else {
+			void this.updateState();
+		}
 	}
 
 	/**
@@ -118,6 +170,12 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 	 * Computes the current repository state and pushes it to the Webview.
 	 */
 	public async updateState(): Promise<void> {
+		if (this.repositoryDetector) {
+			const detState = await this.repositoryDetector.detectRepositories();
+			await this.pushRepoState(detState);
+			return;
+		}
+
 		if (!this._view) {
 			return;
 		}
@@ -132,6 +190,71 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 			type: 'updateRepoState',
 			state
 		});
+	}
+
+	/**
+	 * Pushes repository detection state to the webview view.
+	 */
+	public async pushRepoState(detState?: RepositoryDetectionState): Promise<void> {
+		if (!this._view) {
+			return;
+		}
+
+		const current = detState ?? this.repositoryDetector?.state;
+		if (!current) {
+			return;
+		}
+
+		const activeRepo = current.activeRepo;
+		if (activeRepo && activeRepo.branch && activeRepo.branch !== 'unknown') {
+			this._view.description = activeRepo.branch;
+		} else {
+			this._view.description = undefined;
+		}
+
+		let repoName = 'No Workspace';
+		if (current.status === 'detecting') {
+			repoName = activeRepo?.repoName ?? 'Detecting...';
+		} else if (current.status === 'detected' && activeRepo) {
+			repoName = activeRepo.repoName;
+		} else if (current.status === 'git-unavailable') {
+			repoName = 'Git Unavailable';
+		} else if (current.status === 'detection-failed') {
+			repoName = 'Detection Failed';
+		} else if (current.status === 'no-repo') {
+			repoName = (vscode.workspace.workspaceFolders?.length ?? 0) > 0 ? 'No Git Repository' : 'No Workspace';
+		}
+
+		const payload: WebviewRepoState = {
+			status: current.status,
+			hasWorkspace: (vscode.workspace.workspaceFolders?.length ?? 0) > 0,
+			isGitRepo: current.status === 'detected' && !!activeRepo,
+			repoName,
+			branch: activeRepo?.branch ?? (current.status === 'detecting' ? 'Detecting...' : 'None'),
+			remoteUrl: activeRepo?.remoteUrl,
+			stagedCount: activeRepo?.stagedCount,
+			uncommittedCount: activeRepo?.uncommittedCount,
+			statusSummary: activeRepo?.statusSummary,
+			totalReposCount: current.allRepos.length,
+			errorMessage: current.errorMessage,
+			activeProvider: this.settingsService?.getProvider() ?? 'groq'
+		};
+
+		void this._view.webview.postMessage({
+			type: 'updateRepoState',
+			state: payload
+		});
+	}
+
+	public dispose(): void {
+		for (const d of this._disposables) {
+			try {
+				d.dispose();
+			} catch {
+				// Ignore
+			}
+		}
+		this._disposables.length = 0;
 	}
 
 	private async getCurrentRepoState(): Promise<RepoState> {
@@ -314,9 +437,45 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 			flex-shrink: 0;
 		}
 
+		.status-dot.loading {
+			background-color: var(--accent-blue);
+			box-shadow: 0 0 6px rgba(88, 166, 255, 0.5);
+			animation: dotPulse 1.2s infinite ease-in-out;
+		}
+
 		.status-dot.warning {
 			background-color: var(--accent-amber);
 			box-shadow: 0 0 6px rgba(210, 153, 34, 0.4);
+		}
+
+		.status-dot.error {
+			background-color: #f85149;
+			box-shadow: 0 0 6px rgba(248, 81, 73, 0.5);
+		}
+
+		@keyframes dotPulse {
+			0%, 100% { opacity: 0.35; transform: scale(0.9); }
+			50% { opacity: 1; transform: scale(1.15); }
+		}
+
+		.repo-switch-btn {
+			background: rgba(88, 166, 255, 0.15);
+			color: var(--accent-blue);
+			border: 1px solid rgba(88, 166, 255, 0.3);
+			border-radius: 4px;
+			padding: 2px 7px;
+			font-size: 10px;
+			font-weight: 500;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+			transition: all 0.15s ease;
+		}
+
+		.repo-switch-btn:hover {
+			background: rgba(88, 166, 255, 0.25);
+			border-color: var(--accent-blue);
 		}
 
 		.repo-refresh-btn {
@@ -804,6 +963,12 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 	<!-- Current Repository Card -->
 	<div class="section-header">
 		<span>CURRENT REPOSITORY</span>
+		<button class="repo-switch-btn" id="switchRepoBtn" title="Switch active Git repository" style="display: none;">
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16"/>
+			</svg>
+			<span id="repoCountText">Switch</span>
+		</button>
 	</div>
 	<div class="repo-card" id="repoCard">
 		<button class="repo-refresh-btn" id="refreshBtn" title="Refresh Repository Status">
@@ -818,10 +983,10 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 				<circle cx="6" cy="18" r="3"></circle>
 				<path d="M18 9a9 9 0 0 1-9 9"></path>
 			</svg>
-			<span id="repoName">Loading...</span>
+			<span id="repoName">Detecting...</span>
 		</div>
 		<div class="repo-status-row">
-			<div class="status-dot" id="statusDot"></div>
+			<div class="status-dot loading" id="statusDot"></div>
 			<span id="statusText">Detecting repository...</span>
 		</div>
 	</div>
@@ -1097,6 +1262,9 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 	<script>
 		const vscode = acquireVsCodeApi();
 
+		// Handshake: Notify extension host immediately that listener and DOM are ready
+		vscode.postMessage({ command: 'webviewReady' });
+
 		// Attach action card clicks
 		document.querySelectorAll('.action-card, .sub-item-btn').forEach(btn => {
 			btn.addEventListener('click', (e) => {
@@ -1111,8 +1279,21 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 		// Refresh button
 		document.getElementById('refreshBtn').addEventListener('click', (e) => {
 			e.stopPropagation();
+			const statusDotEl = document.getElementById('statusDot');
+			const statusTextEl = document.getElementById('statusText');
+			statusDotEl.className = 'status-dot loading';
+			statusTextEl.textContent = 'Detecting repository...';
 			vscode.postMessage({ command: 'refresh' });
 		});
+
+		// Switch Repo button
+		const switchRepoBtn = document.getElementById('switchRepoBtn');
+		if (switchRepoBtn) {
+			switchRepoBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				vscode.postMessage({ command: 'selectRepo' });
+			});
+		}
 
 		// Toggle accordions
 		function toggleAccordion(id) {
@@ -1130,8 +1311,41 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 				const repoNameEl = document.getElementById('repoName');
 				const statusDotEl = document.getElementById('statusDot');
 				const statusTextEl = document.getElementById('statusText');
+				const switchBtn = document.getElementById('switchRepoBtn');
+				const repoCountText = document.getElementById('repoCountText');
 
-				if (state.isGitRepo) {
+				if (state.totalReposCount > 1 && switchBtn) {
+					switchBtn.style.display = 'inline-flex';
+					if (repoCountText) {
+						repoCountText.textContent = 'Switch (' + state.totalReposCount + ')';
+					}
+				} else if (switchBtn) {
+					switchBtn.style.display = 'none';
+				}
+
+				if (state.status === 'detecting') {
+					repoNameEl.textContent = state.repoName || 'Detecting...';
+					statusDotEl.className = 'status-dot loading';
+					statusTextEl.textContent = 'Detecting repository...';
+				} else if (state.status === 'detected') {
+					repoNameEl.textContent = state.repoName;
+					statusDotEl.className = 'status-dot';
+					var branchText = state.branch || 'HEAD';
+					var summary = state.statusSummary ? ' • ' + state.statusSummary : '';
+					statusTextEl.textContent = branchText + summary;
+				} else if (state.status === 'no-repo') {
+					repoNameEl.textContent = state.hasWorkspace ? 'No Git Repository' : 'No Workspace';
+					statusDotEl.className = 'status-dot warning';
+					statusTextEl.textContent = state.hasWorkspace ? 'No Git repository found' : 'Open a folder to start';
+				} else if (state.status === 'git-unavailable') {
+					repoNameEl.textContent = 'Git Unavailable';
+					statusDotEl.className = 'status-dot warning';
+					statusTextEl.textContent = state.errorMessage || 'Git extension unavailable';
+				} else if (state.status === 'detection-failed') {
+					repoNameEl.textContent = 'Detection Failed';
+					statusDotEl.className = 'status-dot error';
+					statusTextEl.textContent = state.errorMessage || 'Repository detection failed';
+				} else if (state.isGitRepo) {
 					repoNameEl.textContent = state.repoName;
 					statusDotEl.className = 'status-dot';
 					statusTextEl.textContent = 'Repository detected (' + state.branch + ')';
