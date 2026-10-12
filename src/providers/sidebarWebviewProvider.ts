@@ -78,7 +78,9 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				// Immediate handshake: send current state as soon as webview listener is active
 				if (this.repositoryDetector) {
 					await this.pushRepoState();
-					void this.repositoryDetector.detectRepositories();
+					if (this.repositoryDetector.state.status === 'detecting') {
+						await this.repositoryDetector.detectRepositories();
+					}
 				} else {
 					await this.updateState();
 				}

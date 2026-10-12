@@ -35,6 +35,31 @@ const mockVscode = {
 		file: (f) => ({ fsPath: f, path: f, toString: () => f }),
 		from: (o) => ({ ...o, toString: () => `${o.scheme}://${o.path}` })
 	},
+	EventEmitter: class {
+		constructor() {
+			this._listeners = [];
+			this.event = (listener) => {
+				this._listeners.push(listener);
+				return {
+					dispose: () => {
+						const idx = this._listeners.indexOf(listener);
+						if (idx >= 0) this._listeners.splice(idx, 1);
+					}
+				};
+			};
+		}
+		fire(data) {
+			for (const l of [...this._listeners]) {
+				try { l(data); } catch {}
+			}
+		}
+		dispose() {
+			this._listeners = [];
+		}
+	},
+	extensions: {
+		getExtension: () => undefined
+	},
 	workspace: {
 		workspaceFolders: [],
 		openTextDocument: async (uri) => ({
@@ -62,7 +87,8 @@ const mockVscode = {
 			revealRange: () => {}
 		}),
 		withProgress: async (opts, task) => task({ report: () => {} }),
-		registerWebviewViewProvider: () => ({ dispose: () => {} })
+		registerWebviewViewProvider: () => ({ dispose: () => {} }),
+		onDidChangeActiveTextEditor: () => ({ dispose: () => {} })
 	},
 	commands: {
 		registerCommand: () => ({ dispose: () => {} }),
