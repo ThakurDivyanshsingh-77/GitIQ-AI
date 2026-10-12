@@ -24,7 +24,9 @@ import { registerRepositoryInfoCommand } from './commands/repositoryInfoCommand'
 import { registerSavePullRequestCommand } from './commands/savePullRequestCommand';
 import { registerSearchCommitHistoryCommand } from './commands/searchCommitHistoryCommand';
 import { registerSelectModelCommand } from './commands/selectModelCommand';
+import { registerSelectProviderCommand } from './commands/selectProviderCommand';
 import { registerSetApiKeyCommand } from './commands/setApiKeyCommand';
+import { registerSetGeminiApiKeyCommand } from './commands/setGeminiApiKeyCommand';
 import { registerTopContributorsCommand } from './commands/topContributorsCommand';
 import { registerUpdateApiKeyCommand } from './commands/updateApiKeyCommand';
 import { registerViewCommitHistoryCommand } from './commands/viewCommitHistoryCommand';
@@ -44,6 +46,7 @@ import { PromptBuilder } from './services/promptBuilder';
 import { PullRequestService } from './services/pullRequestService';
 import { SettingsService } from './services/SettingsService';
 import { SidebarWebviewProvider } from './providers/sidebarWebviewProvider';
+import { registerLanguageModelTools } from './providers/languageModelTools';
 import { COMMAND_IDS } from './utils/constants';
 
 let loggerService: LoggerService | undefined;
@@ -147,14 +150,20 @@ export function activate(context: vscode.ExtensionContext): void {
 
 		// Settings & Configuration commands
 		registerSetApiKeyCommand(context, settingsService, loggerService);
+		registerSetGeminiApiKeyCommand(context, settingsService, loggerService);
 		registerUpdateApiKeyCommand(context, settingsService, loggerService);
 		registerRemoveApiKeyCommand(context, settingsService, loggerService);
 		registerSelectModelCommand(context, settingsService, loggerService);
+		registerSelectProviderCommand(context, settingsService, loggerService);
+
+		// Native VS Code Language Model Tools for GitHub Copilot Chat
+		registerLanguageModelTools(context);
 
 		// GitIQ Activity Bar Modern Sidebar Webview View
 		const sidebarWebviewProvider = new SidebarWebviewProvider(
 			context.extensionUri,
 			gitService,
+			settingsService,
 			loggerService
 		);
 

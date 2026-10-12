@@ -64,7 +64,7 @@ export class CommitMessageService {
 		});
 
 		const rawResponse = response.message.subject;
-		this.logger?.info(`[Groq API Response] Raw response text:\n"${rawResponse}"`);
+		this.logger?.info(`[${response.provider.toUpperCase()} Response] Raw response text:\n"${rawResponse}"`);
 
 		const validation = this.commitMessageValidator.validate(rawResponse);
 		this.logger?.info(`[Sanitizer] Extracted message content: "${validation.sanitized}"`);

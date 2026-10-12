@@ -150,14 +150,16 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 				isGitRepo: true,
 				repoName,
 				branch,
-				remoteUrl
+				remoteUrl,
+				activeProvider: this.settingsService?.getProvider() ?? 'groq'
 			};
 		} catch {
 			return {
 				hasWorkspace: true,
 				isGitRepo: false,
 				repoName: folderName,
-				branch: 'unknown'
+				branch: 'unknown',
+				activeProvider: this.settingsService?.getProvider() ?? 'groq'
 			};
 		}
 	}
@@ -738,7 +740,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 				</div>
 				<div class="tool-info">
 					<div class="tool-title">AI Settings</div>
-					<div class="tool-desc">Provider, model and API key</div>
+					<div class="tool-desc" id="settingsDesc">Provider, model and API key</div>
 				</div>
 				<div class="tool-chevron">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -747,17 +749,21 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 				</div>
 			</div>
 			<div class="tool-content">
+				<button class="sub-item-btn" data-cmd="${COMMAND_IDS.selectProvider}">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+					Switch AI Provider
+				</button>
 				<button class="sub-item-btn" data-cmd="${COMMAND_IDS.setApiKey}">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 1.5L16 7l-4 4-2-2-4 4 4 4 2-2 4-4 1.5-1.5z"/></svg>
 					Set Groq API Key
 				</button>
-				<button class="sub-item-btn" data-cmd="${COMMAND_IDS.updateApiKey}">
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-					Update Groq API Key
+				<button class="sub-item-btn" data-cmd="${COMMAND_IDS.setGeminiApiKey}">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+					Set Gemini API Key
 				</button>
 				<button class="sub-item-btn" data-cmd="${COMMAND_IDS.selectModel}">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/></svg>
-					Select Groq Model
+					Select Model
 				</button>
 				<button class="sub-item-btn" data-cmd="${COMMAND_IDS.removeApiKey}">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -818,6 +824,13 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 					repoNameEl.textContent = 'No Workspace';
 					statusDotEl.className = 'status-dot warning';
 					statusTextEl.textContent = 'Open a folder to start';
+				}
+
+				if (state.activeProvider) {
+					const descEl = document.getElementById('settingsDesc');
+					if (descEl) {
+						descEl.textContent = 'Active: ' + state.activeProvider.toUpperCase();
+					}
 				}
 			}
 		});

@@ -127,13 +127,17 @@ export const LEGACY_COMMAND_IDS: Record<keyof typeof COMMAND_IDS, string> = {
 	removeApiKey: 'commitPilotAI.removeApiKey',
 	selectModel: 'commitPilotAI.selectModel',
 	refreshSidebar: 'commitPilotAI.refreshSidebar',
-	aiCodeReview: 'commitPilotAI.aiCodeReview'
+	aiCodeReview: 'commitPilotAI.aiCodeReview',
+	selectProvider: 'commitPilotAI.selectProvider',
+	setGeminiApiKey: 'commitPilotAI.setGeminiApiKey'
 };
 
 /** Human-readable names used when presenting provider choices in UI. */
 export const PROVIDER_NAMES: Readonly<Record<Provider, string>> = {
 	[Provider.Groq]: 'Groq',
+	[Provider.Copilot]: 'GitHub Copilot',
 	[Provider.OpenAI]: 'OpenAI',
-	[Provider.Gemini]: 'Gemini',
-	[Provider.Ollama]: 'Ollama'
+	[Provider.Gemini]: 'Google Gemini',
+	[Provider.Ollama]: 'Ollama (Local)',
+	[Provider.MCP]: 'External Agent / MCP'
 };

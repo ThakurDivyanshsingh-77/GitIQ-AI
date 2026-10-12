@@ -294,9 +294,8 @@ export class GitIqMcpServer {
 			files: filesChanged.slice(0, 10),
 			suggestion: {
 				subject: validation.sanitized,
-				type: validation.type,
-				scope: validation.scope,
-				description: validation.description
+				isValid: validation.isValid,
+				reason: validation.reason
 			}
 		});
 	}
@@ -334,6 +333,8 @@ export class GitIqMcpServer {
 			note: 'IMPORTANT: This pull request is a proposal and has NOT been created on GitHub. Human review required.',
 			sourceBranch: currentBranch,
 			targetBranch: defaultBranch,
+			hasDiff: Boolean(branchDiff && branchDiff.trim()),
+			diffLengthChars: branchDiff ? branchDiff.length : 0,
 			suggestion: {
 				title: titleSuggestion,
 				description: descriptionSuggestion

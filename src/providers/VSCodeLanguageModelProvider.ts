@@ -17,7 +17,6 @@ import type { LoggerService } from '../services/loggerService';
  */
 export class VSCodeLanguageModelProvider implements AIProvider {
 	public readonly provider = Provider.Copilot;
-	private configuration?: ProviderConfiguration;
 
 	public constructor(private readonly logger?: LoggerService) {}
 
@@ -25,8 +24,7 @@ export class VSCodeLanguageModelProvider implements AIProvider {
 	 * Prepares the Copilot language model provider.
 	 * Does not require an API key since authentication is handled natively by VS Code.
 	 */
-	public async initialize(configuration: ProviderConfiguration): Promise<void> {
-		this.configuration = configuration;
+	public async initialize(_configuration: ProviderConfiguration): Promise<void> {
 		this.logger?.info('VSCodeLanguageModelProvider initialized (native Copilot integration).');
 	}
 
@@ -86,7 +84,7 @@ export class VSCodeLanguageModelProvider implements AIProvider {
 		// 4. Stream response from model with proper error handling
 		try {
 			this.logger?.info('Sending request to VS Code Language Model API...');
-			const chatResponse = await selectedModel.sendChatRequest(
+			const chatResponse = await selectedModel.sendRequest(
 				messages,
 				{},
 				effectiveToken
