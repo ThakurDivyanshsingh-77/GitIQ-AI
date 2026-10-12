@@ -76,7 +76,8 @@ src/
 │   ├── historyPreviewProvider.ts     # Read-only analytics markdown documents
 │   ├── pullRequestProvider.ts       # Read-only AI pull request documents
 │   ├── repoInfoProvider.ts          # Read-only repository info document
-│   └── sidebarTreeDataProvider.ts   # Native Activity Bar sidebar TreeDataProvider
+│   ├── sidebarTreeDataProvider.ts   # Native Activity Bar sidebar TreeDataProvider (legacy fallback)
+│   └── sidebarWebviewProvider.ts    # Modern WebviewViewProvider with card dashboard UI
 ├── services/                         # Core Business Logic Services
 │   ├── commitMessageService.ts       # Orchestrates Diff -> Prompt -> AI -> Validator
 │   ├── commitMessageValidator.ts     # Validates AI response format
@@ -186,18 +187,20 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 
 ### Views & Containers (`package.json`)
 - **Activity Bar Container (`gitiq-sidebar`)**: Dedicated GitIQ icon (`resources/icon.svg`) on the VS Code Activity Bar.
-- **Sidebar View (`gitiq.sidebarView`)**: High-density TreeView instantiated via `vscode.window.createTreeView` (`showCollapseAll: true`) backed by `SidebarTreeDataProvider` with refined visual hierarchy:
-  - **Header Item**: Branded `GitIQ` logo and `AI Git Assistant` subtitle.
-  - **Repository Status**: Real-time detection (`repo • branch`) with empty state guidance.
-  - **Quick Actions (Expanded by default)**: Immediate 1-click access to primary workflows (*AI Commit*, *Create PR*, *Commit History*).
-  - **Organized Tool Sections (Collapsed by default on fresh open, state tracked across refreshes)**:
-    - **Git & GitHub**: Current Branch, Repository Info, Push, Pull, Fetch, Open on GitHub, Open Branch on GitHub.
-    - **Pull Requests**: Create PR, Open PR Page, Copy PR Title, Copy PR Description, Copy Entire PR, Save PR.
-    - **Commit Analytics**: Search Commits, Commit Statistics, Top Contributors, Commit Activity, Export Report.
-    - **AI Tools**: Preview Staged Diff, Explain Commit.
-    - **AI Settings**: Set API Key, Update API Key, Remove API Key, Select AI Model.
-- **Views Welcome**: Native empty state view when no folder is open in VS Code.
-- **View Title Menus**: Instant shortcuts for settings (`gitIQ.setApiKey`, $(key)), reload (`gitIQ.refreshSidebar`, $(refresh)), and native collapse-all.
+- **Sidebar View (`gitiq.sidebarView`)**: Modern card-based `WebviewView` dashboard (`SidebarWebviewProvider`) designed to match high-end dark AI interfaces:
+  - **Current Repository Card**: Real-time detected repo name (`tournament-2` / current workspace) with live green status indicator (`Repository detected (branch)`), live branch badge in header description, and instant refresh button.
+  - **Quick Actions (2x2 Grid)**: High-contrast interactive cards with clean SVGs and sub-labels:
+    - **AI Commit**: "Generate a message" (`gitIQ.generateCommitMessage`)
+    - **Code Review**: "Review your changes" (`gitIQ.aiCodeReview`)
+    - **Create PR**: "Prepare a pull request" (`gitIQ.generatePullRequest`)
+    - **History**: "Explore commits" (`gitIQ.viewCommitHistory`)
+  - **All Tools (Interactive Accordions)**:
+    - **Git & GitHub**: Branch, push, pull, staged diff, current branch, repo info, and GitHub browser tools.
+    - **Pull Requests**: Generate, copy title, copy description, copy entire PR, save markdown, and GitHub compare link.
+    - **Commit Analytics**: Keyword search, repository metrics, top contributors, 7-day activity, and report export.
+    - **AI Settings**: Set Groq key, update key, select model, and remove key.
+- **Views Welcome**: Native empty state view when no workspace folder is open.
+- **View Title Menus**: Instant shortcuts for settings (`gitIQ.setApiKey`, $(key)) and reload (`gitIQ.refreshSidebar`, $(refresh)).
 
 ### Virtual Scheme Registration
 - **`gitiq-git-diff:`**: `GitDiffPreviewProvider` (Read-only staged diff document preview).
@@ -212,14 +215,11 @@ State management relies on VS Code Workspace Configuration settings (`gitIQ.*`) 
 ## 6. Current Status & Changelog
 
 ### Current Status: Marketplace Production Release (`v1.1.0`)
-- [x] **Activity Bar & Sidebar Redesign**: Implemented dedicated Activity Bar icon container (`resources/icon.svg`) and high-density, uncluttered `TreeView` dashboard (`SidebarTreeDataProvider`).
-- [x] **Native Header & View Container**: Changed view name in `package.json` to `"Dashboard"` to eliminate repetitive `"GitIQ: GitIQ Dashboard"` title bar. Wired `treeView.description = currentBranch` to dynamically display the active branch natively in the panel header.
-- [x] **Eliminated Fake Header Item**: Removed dummy `GitIQ AI Git Assistant` root tree item that added visual clutter and redundant clicks.
-- [x] **Non-Disruptive Repository Status**: Converted repository item into a clean collapsible node with child details (`Branch`, `Remote`, `View Repository Report`). Removed automatic document launching on parent clicks so exploring the sidebar never hijacks the active editor.
-- [x] **Direct 1-Click Primary Actions**: Promoted high-frequency commands (*AI Commit*, *Create PR*, *Commit History*) to immediate top-level root items without unnecessary folder nesting.
-- [x] **Default-Collapsed Secondary Categories**: *Git & GitHub*, *Pull Requests*, *Commit Analytics*, *AI Tools*, and *AI Settings* start collapsed by default.
-- [x] **TreeView Event-Driven Expansion Tracking**: Wired `createTreeView` with `onDidExpandElement` and `onDidCollapseElement` to keep user choices intact on refresh without forced collapse or unwanted expansion.
-- [x] **Clean, Short Labels**: Stripped visual clutter and long inline descriptions in favor of short labels and detailed tooltips.
+- [x] **Modern Card-Based Webview Dashboard UI**: Migrated `gitiq.sidebarView` from basic tree view to a rich `WebviewViewProvider` (`SidebarWebviewProvider`) matching the dark card design mockup.
+- [x] **Current Repository Card**: Live workspace Git repository detection, branch indicator, and real-time state synchronization via message passing.
+- [x] **2x2 Quick Actions Grid**: Instant 1-click execution for AI Commit, Code Review, Create PR, and History.
+- [x] **Collapsible All Tools Section**: Accordion layout with dedicated submenus for Git & GitHub, Pull Requests, Commit Analytics, and AI Settings.
+- [x] **Native Theme Compatibility**: Fully styled using VS Code theme CSS variables with dark theme fallbacks, micro-interactions, and responsive layout.
 - [x] **Integrated Build Pipeline**: `npm run compile` automatically runs `tsc -p ./ && npm run build` to keep bundled `out/extension.js` fresh for debugging and launch.
 - [x] Audited and verified all 31 commands in `package.json`, `activationEvents`, `src/utils/constants.ts`, and `src/commands/*.ts`.
 - [x] Packaging verification (`vsce package`) successfully builds `gitiq-1.1.0.vsix` with 0 errors.

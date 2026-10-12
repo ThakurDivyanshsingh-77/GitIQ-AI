@@ -248,9 +248,9 @@
     "views": {
       "gitiq-sidebar": [
         {
+          "type": "webview",
           "id": "gitiq.sidebarView",
-          "name": "Dashboard",
-          "type": "tree"
+          "name": "Dashboard"
         }
       ]
     },

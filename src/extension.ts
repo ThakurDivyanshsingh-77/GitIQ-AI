@@ -43,7 +43,7 @@ import { LoggerService } from './services/loggerService';
 import { PromptBuilder } from './services/promptBuilder';
 import { PullRequestService } from './services/pullRequestService';
 import { SettingsService } from './services/SettingsService';
-import { SidebarTreeDataProvider } from './providers/sidebarTreeDataProvider';
+import { SidebarWebviewProvider } from './providers/sidebarWebviewProvider';
 import { COMMAND_IDS } from './utils/constants';
 
 let loggerService: LoggerService | undefined;
@@ -151,41 +151,25 @@ export function activate(context: vscode.ExtensionContext): void {
 		registerRemoveApiKeyCommand(context, settingsService, loggerService);
 		registerSelectModelCommand(context, settingsService, loggerService);
 
-		// GitIQ Activity Bar Sidebar Tree View
-		const sidebarProvider = new SidebarTreeDataProvider(gitService);
-		const treeView = vscode.window.createTreeView('gitiq.sidebarView', {
-			treeDataProvider: sidebarProvider,
-			showCollapseAll: true
-		});
-
-		const updateTreeDescription = async (): Promise<void> => {
-			const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-			if (workspaceFolder && gitService) {
-				try {
-					const branch = await gitService.getCurrentBranch(workspaceFolder.uri.fsPath);
-					treeView.description = branch;
-				} catch {
-					treeView.description = undefined;
-				}
-			} else {
-				treeView.description = undefined;
-			}
-		};
-
-		void updateTreeDescription();
+		// GitIQ Activity Bar Modern Sidebar Webview View
+		const sidebarWebviewProvider = new SidebarWebviewProvider(
+			context.extensionUri,
+			gitService,
+			loggerService
+		);
 
 		context.subscriptions.push(
-			sidebarProvider,
-			treeView,
-			treeView.onDidExpandElement((event) => {
-				sidebarProvider.setExpanded(event.element.id, true);
-			}),
-			treeView.onDidCollapseElement((event) => {
-				sidebarProvider.setExpanded(event.element.id, false);
-			}),
+			vscode.window.registerWebviewViewProvider(
+				SidebarWebviewProvider.viewType,
+				sidebarWebviewProvider,
+				{
+					webviewOptions: {
+						retainContextWhenHidden: true
+					}
+				}
+			),
 			vscode.commands.registerCommand(COMMAND_IDS.refreshSidebar, () => {
-				sidebarProvider.refresh();
-				void updateTreeDescription();
+				void sidebarWebviewProvider.updateState();
 				loggerService?.info('GitIQ sidebar refreshed.');
 			}),
 			vscode.commands.registerCommand(COMMAND_IDS.aiCodeReview, () => {
@@ -195,8 +179,7 @@ export function activate(context: vscode.ExtensionContext): void {
 				loggerService?.info('AI Code Review (planned) invoked.');
 			}),
 			vscode.workspace.onDidChangeWorkspaceFolders(() => {
-				sidebarProvider.refresh();
-				void updateTreeDescription();
+				void sidebarWebviewProvider.updateState();
 			})
 		);
 
