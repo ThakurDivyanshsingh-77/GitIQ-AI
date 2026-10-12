@@ -112,10 +112,12 @@ src/
 │   ├── loggerService.ts              # Output channel logging service ("GitIQ")
 │   ├── promptBuilder.ts              # Deterministic AI prompt builder
 │   ├── pullRequestService.ts        # AI pull request orchestration service
+│   ├── repositoryDetector.ts         # VS Code Git extension API detector, lifecycle tracker, & multi-repo manager
 │   └── SettingsService.ts           # Multi-provider SecretStorage & configuration manager
 ├── types/                            # TypeScript interfaces & domain types
 │   ├── commit.ts                     # Commit contracts & validation schemas
-│   └── provider.ts                   # Provider identifiers & config contracts
+│   ├── provider.ts                   # Provider identifiers & config contracts
+│   └── vscodeGit.ts                  # Built-in VS Code Git extension API contracts (GitExtension, API, Repository)
 └── utils/                            # Utilities & Error domain types
     ├── constants.ts                  # Shared command IDs & configuration keys
     └── errors.ts                     # Custom error hierarchy (GitIQError, ModelAccessDeniedError, etc.)
@@ -134,10 +136,14 @@ gitiq/
 ├── docs/
 │   └── EXTERNAL_AGENT_COMPATIBILITY.md # Detailed external agent matrix & setup guide
 ├── test/                             # Automated test suite
+│   ├── codeReviewService.test.cjs    # AI code review execution, diff partitioning, & findings tests
 │   ├── commitMessageValidator.test.cjs # Commit message format and sanitization tests
+│   ├── geminiProvider.test.cjs       # Google Gemini provider & API error mapping tests
 │   ├── mcpServer.test.cjs            # MCP tool logic, security, and schema tests
 │   ├── mockVscode.cjs                # Standalone VS Code API mock for Node test runner
 │   ├── providerSelection.test.cjs    # Multi-provider factory and fallback tests
+│   ├── pullRequestService.test.cjs   # Pull request generation, schema validation, & error handling tests
+│   ├── repositoryDetection.test.cjs  # VS Code Git API detection, lifecycle states, & multi-repo tests
 │   └── vscodeLanguageModelProvider.test.cjs # Copilot LM provider unit tests
 ├── .agents/
 │   └── AGENTS.md                     # Mandatory PROJECT_CONTEXT.md update rule
@@ -284,6 +290,19 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
     - Empty state when no changes exist, and error state with Retry action.
   - **Virtual Markdown Report**: In-memory read-only report provider (`gitiq-code-review`) and command `gitIQ.showCodeReviewReport`.
   - **Automated Test Suite**: Added 10 unit tests in `test/codeReviewService.test.cjs` expanding the automated test suite to 55 tests (100% passing).
+- [x] **Repository Detection Stuck on Loading & Multi-Root Support (Root-Cause Fix)**:
+  - **Root Cause**:
+    1. Webview message loss race condition: `SidebarWebviewProvider.resolveWebviewView` set the HTML with hardcoded `Loading...` / `Detecting repository...` text and called `updateState()` before the webview's internal browser finished parsing the DOM and registering its `window.addEventListener('message')` listener. Messages posted during page load were discarded, and because the client script never requested state, the card remained stuck indefinitely.
+    2. Zero integration with the built-in VS Code Git extension (`vscode.git`): GitIQ solely relied on CLI subprocesses at `workspaceFolders[0]`. If Git was slow to activate, if repositories opened in subfolders (e.g. monorepos), or if multi-root workspaces were used, detection failed.
+    3. Missing dynamic Git change synchronization: GitIQ did not listen to branch checkout, commit, or staging events from VS Code's Source Control system.
+    4. Lack of resilient lifecycle states: No timeout guarantee or explicit handling for `detecting`, `detected`, `no-repo`, `git-unavailable`, or `detection-failed`.
+  - **Fixes Applied**:
+    1. **Webview Handshake (`webviewReady`)**: Added an immediate bidirectional handshake where the webview DOM posts `{ command: 'webviewReady' }` as soon as its script listener is mounted, prompting `SidebarWebviewProvider` to immediately deliver the latest repository state.
+    2. **`RepositoryDetector` Service (`src/services/repositoryDetector.ts`)**: Encapsulates official VS Code Git extension API access (`vscode.extensions.getExtension('vscode.git')`), automatic extension activation, access to `git.getAPI(1)`, and dynamic discovery across `git.repositories`.
+    3. **Multi-Root & Subfolder Repository Discovery**: Scans workspace folders and immediate subfolders, supports nested repositories, and provides an in-card QuickPick switcher `[Switch (N)]` and `gitIQ.selectRepository` command when multiple repositories exist. Automatically selects repository matching the active editor's file.
+    4. **Dynamic Event Listeners**: Listens to `gitApi.onDidOpenRepository`, `gitApi.onDidCloseRepository`, `gitApi.onDidChangeState`, and each repository's `repo.state.onDidChange` (updating branch, staged count, and uncommitted count immediately upon Git operations).
+    5. **Concrete Lifecycle States**: Enforces explicit states (`detecting`, `detected`, `no-repo`, `git-unavailable`, `detection-failed`) with a 10-second timeout guarantee, request sequence tokens preventing stale overwrites, and clean disposal of all listeners.
+    6. **Automated Test Suite**: Added 8 unit tests in `test/repositoryDetection.test.cjs` covering official Git API detection, no-repo workspace, CLI fallback, delayed activation, multi-repo QuickPick selection, detached HEAD/empty repo handling, dynamic state change events, and `webviewReady` handshake. Test suite expanded to 63 tests (100% passing).
 
 ---
 
@@ -291,10 +310,11 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
 
 ### Pending Tasks / Roadmap
 - [x] **AI Code Review**: Automated multi-file review for staged/working-tree/branch changes.
+- [x] **Reliable Repository Detection**: Official VS Code Git API integration with multi-root, nested repo, and lifecycle fix.
 - [ ] **Custom Prompt Templates**: Configurable commit styles and PR templates.
 - [ ] **Source Control UI Integration**: Inline action button in VS Code SCM title bar.
 - [x] **Multi-Provider Support**: Implemented Copilot, Gemini, Ollama, and MCP.
-- [x] **Automated Test Suite**: Implemented 55 tests across 7 test suites in `test/`.
+- [x] **Automated Test Suite**: Implemented 63 tests across 8 test suites in `test/`.
 
 ### Known Issues
 - *None.*
