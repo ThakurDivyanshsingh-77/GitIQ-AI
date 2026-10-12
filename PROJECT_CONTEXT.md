@@ -241,9 +241,9 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
   - Updated `SidebarWebviewProvider` with dynamic provider status badge and configuration actions.
   - Added providers: Groq API, GitHub Copilot, Google Gemini API, Ollama (offline local), and MCP Delegation.
 - [x] **Phase 5: Automated Testing & Verification**:
-  - Implemented 26 automated unit tests across 4 suites using Node's built-in test runner.
-  - 100% test pass rate (26 passed, 0 failed).
-  - Clean linting (`npm run lint`), compilation (`npm run compile`), and packaging (`vsce package` -> `gitiq-1.1.0.vsix` 468 KB).
+  - Implemented 28 automated unit tests across 4 suites using Node's built-in test runner.
+  - 100% test pass rate (28 passed, 0 failed).
+  - Clean linting (`npm run lint`), compilation (`npm run compile`), and packaging (`vsce package` -> `gitiq-1.1.0.vsix` 470 KB).
 
 ---
 
@@ -254,7 +254,7 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
 - [ ] **Custom Prompt Templates**: Configurable commit styles and PR templates.
 - [ ] **Source Control UI Integration**: Inline action button in VS Code SCM title bar.
 - [x] **Multi-Provider Support**: Implemented Copilot, Gemini, Ollama, and MCP.
-- [x] **Automated Test Suite**: Implemented 26 tests in `test/`.
+- [x] **Automated Test Suite**: Implemented 28 tests in `test/`.
 
 ### Known Issues
 - *None.*

@@ -116,3 +116,89 @@ test('GitIqMcpServer - Unknown tool error handling', async () => {
 	const parsed = JSON.parse(result.content[0].text);
 	assert.match(parsed.error, /Unknown tool/);
 });
+
+test('GitIqMcpServer - Handles directory outside a Git repository gracefully', async () => {
+	const os = require('node:os');
+	const fs = require('node:fs');
+	const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitiq-nongit-'));
+
+	try {
+		const server = new GitIqMcpServer();
+		const result = await server.executeTool('get_repository_info', {
+			workspacePath: tempDir
+		});
+
+		assert.equal(result.isError, true);
+		const parsed = JSON.parse(result.content[0].text);
+		assert.equal(parsed.status, 'ERROR');
+		assert.match(parsed.error, /not a Git repository/i);
+	} finally {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	}
+});
+
+test('GitIqMcpServer - Standalone stdio process responds to initialize, tools/list, and tools/call', async () => {
+	const { spawn } = require('node:child_process');
+	const readline = require('node:readline');
+
+	const serverScript = path.resolve(__dirname, '../out/mcp/server.js');
+	const child = spawn(process.execPath, [serverScript], {
+		stdio: ['pipe', 'pipe', 'pipe']
+	});
+
+	const responses = [];
+	const rl = readline.createInterface({ input: child.stdout });
+
+	const waitResponse = (expectedId) => {
+		return new Promise((resolve, reject) => {
+			const check = () => {
+				const found = responses.find((r) => r.id === expectedId);
+				if (found) {
+					return resolve(found);
+				}
+				setTimeout(check, 20);
+			};
+			check();
+			setTimeout(() => reject(new Error(`Timeout waiting for response id ${expectedId}`)), 5000);
+		});
+	};
+
+	rl.on('line', (line) => {
+		try {
+			const json = JSON.parse(line.trim());
+			responses.push(json);
+		} catch {
+			// ignore non-json log lines
+		}
+	});
+
+	// 1. Send initialize
+	child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize' }) + '\n');
+	const initRes = await waitResponse(1);
+	assert.equal(initRes.result.serverInfo.name, 'gitiq-mcp');
+
+	// 2. Send tools/list
+	child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }) + '\n');
+	const listRes = await waitResponse(2);
+	assert.equal(listRes.result.tools.length, 6);
+
+	// 3. Send tools/call
+	child.stdin.write(
+		JSON.stringify({
+			jsonrpc: '2.0',
+			id: 3,
+			method: 'tools/call',
+			params: {
+				name: 'get_repository_info',
+				arguments: { workspacePath: path.resolve(__dirname, '..') }
+			}
+		}) + '\n'
+	);
+	const callRes = await waitResponse(3);
+	assert.ok(callRes.result.content[0].text);
+	const parsed = JSON.parse(callRes.result.content[0].text);
+	assert.equal(parsed.status, 'SUCCESS');
+
+	child.kill();
+});
+
