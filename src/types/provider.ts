@@ -1,9 +1,11 @@
-/** Supported AI backends that may be configured in a future integration phase. */
+/** Supported AI backends supported by GitIQ. */
 export enum Provider {
 	Groq = 'groq',
-	OpenAI = 'openai',
+	Copilot = 'copilot',
 	Gemini = 'gemini',
-	Ollama = 'ollama'
+	Ollama = 'ollama',
+	MCP = 'mcp',
+	OpenAI = 'openai'
 }
 
 /** Runtime options required by an AI provider implementation. */
@@ -12,4 +14,5 @@ export interface ProviderConfiguration {
 	readonly model?: string;
 	readonly temperature: number;
 	readonly timeout: number;
+	readonly endpoint?: string;
 }

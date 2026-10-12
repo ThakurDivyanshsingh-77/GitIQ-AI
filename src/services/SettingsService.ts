@@ -12,6 +12,9 @@ import type { LoggerService } from './loggerService';
 /** Key identifier used to store the Groq API key in VS Code SecretStorage. */
 export const SECRET_STORAGE_API_KEY = 'gitiq.groqApiKey';
 
+/** Key identifier used to store the Gemini API key in VS Code SecretStorage. */
+export const SECRET_STORAGE_GEMINI_API_KEY = 'gitiq.geminiApiKey';
+
 /** Legacy SecretStorage key for backward compatibility migration. */
 export const LEGACY_SECRET_STORAGE_API_KEY = 'commitpilot.groqApiKey';
 
@@ -48,7 +51,7 @@ export const SUPPORTED_GROQ_MODELS = [
 ] as const;
 
 /**
- * Manages secure API key storage in VS Code SecretStorage and settings configuration.
+ * Manages secure API key storage in VS Code SecretStorage and multi-provider settings configuration.
  */
 export class SettingsService {
 	public constructor(
@@ -57,11 +60,42 @@ export class SettingsService {
 	) {}
 
 	/**
-	 * Retrieves the Groq API key securely from SecretStorage (checking gitiq.groqApiKey and legacy keys).
-	 *
-	 * @returns Groq API key string or empty string if not found.
+	 * Returns the currently active AI provider.
 	 */
-	public async getApiKey(): Promise<string> {
+	public getProvider(): Provider {
+		const raw = this.getConfiguration().get<string>(CONFIGURATION_KEYS.provider, Provider.Groq);
+		const match = Object.values(Provider).find((p) => p === raw);
+		return match ?? Provider.Groq;
+	}
+
+	/**
+	 * Updates the configured AI provider in global settings.
+	 */
+	public async setProvider(provider: Provider): Promise<void> {
+		this.logger?.info(`Updating configured AI provider to: ${provider}`);
+		await this.getConfiguration().update(
+			CONFIGURATION_KEYS.provider,
+			provider,
+			vscode.ConfigurationTarget.Global
+		);
+	}
+
+	/**
+	 * Retrieves the API key securely from SecretStorage for the specified provider.
+	 *
+	 * @param provider Target provider (defaults to Groq).
+	 * @returns API key string or empty string if not found.
+	 */
+	public async getApiKey(provider: Provider = Provider.Groq): Promise<string> {
+		if (provider === Provider.Gemini) {
+			try {
+				const geminiKey = await this.secrets.get(SECRET_STORAGE_GEMINI_API_KEY);
+				return geminiKey?.trim() || '';
+			} catch {
+				return '';
+			}
+		}
+
 		try {
 			const secretKey = await this.secrets.get(SECRET_STORAGE_API_KEY);
 			if (secretKey?.trim()) {
@@ -71,7 +105,6 @@ export class SettingsService {
 			// Check legacy SecretStorage key
 			const legacySecretKey = await this.secrets.get(LEGACY_SECRET_STORAGE_API_KEY);
 			if (legacySecretKey?.trim()) {
-				// Migrate automatically
 				await this.secrets.store(SECRET_STORAGE_API_KEY, legacySecretKey.trim());
 				await this.secrets.delete(LEGACY_SECRET_STORAGE_API_KEY);
 				return legacySecretKey.trim();
@@ -96,17 +129,24 @@ export class SettingsService {
 	}
 
 	/**
-	 * Stores the Groq API key securely in VS Code SecretStorage and removes any legacy keys from settings.json.
+	 * Stores the API key securely in VS Code SecretStorage.
 	 *
-	 * @param apiKey Raw API key string starting with 'gsk_'.
+	 * @param apiKey Raw API key string.
+	 * @param provider Target provider (defaults to Groq).
 	 */
-	public async setApiKey(apiKey: string): Promise<void> {
+	public async setApiKey(apiKey: string, provider: Provider = Provider.Groq): Promise<void> {
 		const trimmedKey = apiKey.trim();
 		if (!trimmedKey) {
 			throw new ConfigurationError('API key cannot be empty.');
 		}
 
-		if (!trimmedKey.startsWith('gsk_')) {
+		if (provider === Provider.Gemini) {
+			this.logger?.info('Storing Gemini API Key securely in SecretStorage...');
+			await this.secrets.store(SECRET_STORAGE_GEMINI_API_KEY, trimmedKey);
+			return;
+		}
+
+		if (provider === Provider.Groq && !trimmedKey.startsWith('gsk_')) {
 			throw new ConfigurationError("Invalid Groq API key format. API key must start with 'gsk_'.");
 		}
 
@@ -132,19 +172,23 @@ export class SettingsService {
 	}
 
 	/**
-	 * Checks whether a Groq API key is currently stored in SecretStorage or settings.
-	 *
-	 * @returns True if a non-empty API key exists.
+	 * Checks whether an API key is currently stored for the specified provider.
 	 */
-	public async hasApiKey(): Promise<boolean> {
-		const key = await this.getApiKey();
+	public async hasApiKey(provider: Provider = Provider.Groq): Promise<boolean> {
+		const key = await this.getApiKey(provider);
 		return key.length > 0;
 	}
 
 	/**
-	 * Deletes the stored Groq API key from SecretStorage and legacy configuration.
+	 * Deletes the stored API key from SecretStorage.
 	 */
-	public async removeApiKey(): Promise<void> {
+	public async removeApiKey(provider: Provider = Provider.Groq): Promise<void> {
+		if (provider === Provider.Gemini) {
+			this.logger?.info('Removing Gemini API Key from SecretStorage...');
+			await this.secrets.delete(SECRET_STORAGE_GEMINI_API_KEY);
+			return;
+		}
+
 		this.logger?.info('Removing Groq API Key from SecretStorage and configuration...');
 		await this.secrets.delete(SECRET_STORAGE_API_KEY);
 		await this.secrets.delete(LEGACY_SECRET_STORAGE_API_KEY);
@@ -164,9 +208,7 @@ export class SettingsService {
 	}
 
 	/**
-	 * Returns the configured Groq model identifier from VS Code settings.
-	 *
-	 * @returns Model string.
+	 * Returns the configured model identifier from VS Code settings.
 	 */
 	public getModel(): string {
 		const model = this.getConfiguration().get<string>(CONFIGURATION_KEYS.model, GROQ_DEFAULT_MODEL);
@@ -174,9 +216,7 @@ export class SettingsService {
 	}
 
 	/**
-	 * Updates the configured Groq model in global VS Code settings.
-	 *
-	 * @param model Model string to store.
+	 * Updates the configured model in global VS Code settings.
 	 */
 	public async setModel(model: string): Promise<void> {
 		const trimmedModel = model.trim();
@@ -184,7 +224,7 @@ export class SettingsService {
 			throw new ConfigurationError('Model name cannot be empty.');
 		}
 
-		this.logger?.info(`Updating configured Groq model to: ${trimmedModel}`);
+		this.logger?.info(`Updating configured model to: ${trimmedModel}`);
 		await this.getConfiguration().update(
 			CONFIGURATION_KEYS.model,
 			trimmedModel,
@@ -209,7 +249,6 @@ export class SettingsService {
 
 		const existingSecret = await this.secrets.get(SECRET_STORAGE_API_KEY);
 		if (existingSecret) {
-			// Secret already exists, clean up legacy setting quietly
 			await this.getConfiguration().update(
 				CONFIGURATION_KEYS.apiKey,
 				undefined,
@@ -226,31 +265,59 @@ export class SettingsService {
 		);
 
 		if (choice === 'Migrate Now') {
-			await this.setApiKey(legacyConfigKey);
+			await this.setApiKey(legacyConfigKey, Provider.Groq);
 			void vscode.window.showInformationMessage('✓ Groq API Key migrated to secure storage successfully.');
 		}
 	}
 
 	/**
-	 * Validates extension configuration on activation and displays friendly non-blocking warning if API key is missing.
+	 * Validates extension configuration on activation and displays friendly non-blocking warning if required credentials are missing.
 	 */
 	public async validateConfiguration(): Promise<boolean> {
-		const hasKey = await this.hasApiKey();
+		const provider = this.getProvider();
 
-		if (!hasKey) {
-			this.logger?.warn('No Groq API key configured.');
-			void vscode.window.showWarningMessage(
-				'GitIQ: No Groq API key configured. Run "GitIQ: Set Groq API Key".',
-				'Set API Key'
-			).then((selection) => {
-				if (selection === 'Set API Key') {
-					void vscode.commands.executeCommand('gitIQ.setApiKey');
-				}
-			});
-			return false;
+		if (provider === Provider.Groq) {
+			const hasKey = await this.hasApiKey(Provider.Groq);
+			if (!hasKey) {
+				this.logger?.warn('No Groq API key configured.');
+				void vscode.window.showWarningMessage(
+					'GitIQ: No Groq API key configured. Run "GitIQ: Set Groq API Key" or switch to GitHub Copilot.',
+					'Set API Key',
+					'Switch Provider'
+				).then((selection) => {
+					if (selection === 'Set API Key') {
+						void vscode.commands.executeCommand('gitIQ.setApiKey');
+					} else if (selection === 'Switch Provider') {
+						void vscode.commands.executeCommand('gitIQ.selectProvider');
+					}
+				});
+				return false;
+			}
+		} else if (provider === Provider.Copilot) {
+			if (typeof vscode.lm === 'undefined') {
+				this.logger?.warn('vscode.lm API is not available.');
+				void vscode.window.showWarningMessage(
+					'GitIQ: GitHub Copilot integration requires VS Code 1.90+ with Language Model API.'
+				);
+				return false;
+			}
+		} else if (provider === Provider.Gemini) {
+			const hasKey = await this.hasApiKey(Provider.Gemini);
+			if (!hasKey) {
+				this.logger?.warn('No Gemini API key configured.');
+				void vscode.window.showWarningMessage(
+					'GitIQ: No Gemini API key configured. Run "GitIQ: Set Gemini API Key".',
+					'Set API Key'
+				).then((selection) => {
+					if (selection === 'Set API Key') {
+						void vscode.commands.executeCommand('gitIQ.setGeminiApiKey');
+					}
+				});
+				return false;
+			}
 		}
 
-		this.logger?.info(`Configuration validated successfully (model: ${this.getModel()}).`);
+		this.logger?.info(`Configuration validated successfully (provider: ${provider}, model: ${this.getModel()}).`);
 		return true;
 	}
 
@@ -260,17 +327,30 @@ export class SettingsService {
 	 * @returns Promise resolving to complete GitIQConfiguration object.
 	 */
 	public async getConfigurationSnapshot(): Promise<GitIQConfiguration> {
-		const apiKey = await this.getApiKey();
-		if (!apiKey) {
-			throw new ConfigurationError(
-				'Missing Groq API key. Please run "GitIQ: Set Groq API Key".'
-			);
-		}
-
+		const provider = this.getProvider();
 		const config = this.getConfiguration();
+		let apiKey = '';
+
+		if (provider === Provider.Groq) {
+			apiKey = await this.getApiKey(Provider.Groq);
+			if (!apiKey) {
+				throw new ConfigurationError(
+					'Missing Groq API key. Please run "GitIQ: Set Groq API Key" or switch to GitHub Copilot.'
+				);
+			}
+		} else if (provider === Provider.Gemini) {
+			apiKey = await this.getApiKey(Provider.Gemini);
+			if (!apiKey) {
+				throw new ConfigurationError(
+					'Missing Gemini API key. Please run "GitIQ: Set Gemini API Key" or switch to GitHub Copilot.'
+				);
+			}
+		}
+		// For Copilot, Ollama, MCP: no apiKey required!
+
 		return {
 			apiKey,
-			provider: Provider.Groq,
+			provider,
 			model: this.getModel(),
 			temperature: config.get<number>(CONFIGURATION_KEYS.temperature, 0.2),
 			timeout: config.get<number>(CONFIGURATION_KEYS.timeout, 30_000)

@@ -89,7 +89,9 @@ export const COMMAND_IDS = {
 	removeApiKey: 'gitIQ.removeApiKey',
 	selectModel: 'gitIQ.selectModel',
 	refreshSidebar: 'gitIQ.refreshSidebar',
-	aiCodeReview: 'gitIQ.aiCodeReview'
+	aiCodeReview: 'gitIQ.aiCodeReview',
+	selectProvider: 'gitIQ.selectProvider',
+	setGeminiApiKey: 'gitIQ.setGeminiApiKey'
 } as const;
 
 /** Legacy command IDs for backwards compatibility. */

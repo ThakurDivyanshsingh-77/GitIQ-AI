@@ -1,5 +1,9 @@
 import type { AIProvider } from './AIProvider';
 import { GroqProvider } from './GroqProvider';
+import { VSCodeLanguageModelProvider } from './VSCodeLanguageModelProvider';
+import { GeminiProvider } from './GeminiProvider';
+import { OllamaProvider } from './OllamaProvider';
+import { MCPProvider } from './MCPProvider';
 import { Provider } from '../types/provider';
 import { ProviderError } from '../utils/errors';
 import type { LoggerService } from '../services/loggerService';
@@ -13,13 +17,22 @@ export interface AIProviderFactory {
 export class GitIQAIProviderFactory implements AIProviderFactory {
 	public constructor(private readonly logger?: LoggerService) {}
 
-	/** Returns a fresh provider to prevent configuration state from leaking between requests. */
+	/** Returns a fresh provider instance to prevent configuration state from leaking between requests. */
 	public getProvider(provider: Provider): AIProvider {
-		if (provider === Provider.Groq) {
-			return new GroqProvider(this.logger);
+		switch (provider) {
+			case Provider.Groq:
+				return new GroqProvider(this.logger);
+			case Provider.Copilot:
+				return new VSCodeLanguageModelProvider(this.logger);
+			case Provider.Gemini:
+				return new GeminiProvider(this.logger);
+			case Provider.Ollama:
+				return new OllamaProvider(this.logger);
+			case Provider.MCP:
+				return new MCPProvider(this.logger);
+			default:
+				throw new ProviderError(`The provider "${provider}" is not recognized or available.`);
 		}
-
-		throw new ProviderError(`The ${provider} provider is not available.`);
 	}
 }
 

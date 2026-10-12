@@ -13,6 +13,7 @@ export interface CommitRequest {
 	readonly provider: Provider;
 	readonly model?: string;
 	readonly maxTokens?: number;
+	readonly cancellationToken?: any;
 }
 
 /** Normalized result returned by any AI provider implementation. */

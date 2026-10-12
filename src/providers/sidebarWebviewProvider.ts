@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { GitService } from '../services/gitService';
 import type { LoggerService } from '../services/loggerService';
+import type { SettingsService } from '../services/SettingsService';
 import { COMMAND_IDS } from '../utils/constants';
 
 interface RepoState {
@@ -10,6 +11,7 @@ interface RepoState {
 	repoName: string;
 	branch: string;
 	remoteUrl?: string;
+	activeProvider?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider {
 	public constructor(
 		private readonly extensionUri: vscode.Uri,
 		private readonly gitService?: GitService,
+		private readonly settingsService?: SettingsService,
 		private readonly logger?: LoggerService
 	) {}
 
