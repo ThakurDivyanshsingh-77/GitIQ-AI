@@ -21,8 +21,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Added Command Palette command `GitIQ: Set Gemini API Key` (`gitIQ.setGeminiApiKey`).
   - Added active provider badge and Quick Action buttons in the Sidebar Webview dashboard.
 - **Documentation & Verification**:
-  - Added comprehensive `docs/EXTERNAL_AGENT_COMPATIBILITY.md` detailing integration mechanics and boundaries for GitHub Copilot, Google Antigravity, Anthropic Claude Code, and OpenAI Codex.
-  - Added automated unit test suite with 26 passing tests across 4 test suites running on Node's native test runner (`node --test`).
+### Fixed
+- **Gemini Provider Configuration & Error Routing**:
+  - Fixed false-positive Groq error prompt ("API key missing or invalid. Please configure your Groq API key in VS Code Settings.") when using Google Gemini.
+  - Fixed `setGeminiApiKey` to automatically switch the active provider to Gemini and refresh the sidebar UI.
+  - Fixed `SettingsService.getModel()` to dynamically resolve provider-specific models (`gitIQ.geminiModel`) rather than defaulting to Groq's `llama-3.3-70b-versatile`.
+  - Replaced hardcoded Groq error handlers in `generateCommitMessageCommand.ts` with dynamic, provider-aware error messages.
+  - Enhanced `GeminiProvider.ts` with official `x-goog-api-key` header authentication and robust Google API error code handling (HTTP 400 `API_KEY_INVALID`, 403, 404, 429).
+  - Expanded test suite from 26 to 38 unit tests including live HTTP network verification against Google's API.
 
 ### Security
 - Complete elimination of token scraping, private cookie inspection, or internal authorization file harvesting.
