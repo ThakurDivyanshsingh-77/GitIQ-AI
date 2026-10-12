@@ -149,12 +149,14 @@ function showGenerationError(error: unknown): void {
 	}
 
 	if (error instanceof ConfigurationError || error instanceof ProviderAuthenticationError) {
-		void vscode.window.showErrorMessage('API key missing or invalid. Please configure your Groq API key in VS Code Settings.');
+		const msg = error.message || 'API key missing or invalid. Please check your AI provider configuration in Settings.';
+		void vscode.window.showErrorMessage(msg);
 		return;
 	}
 
 	if (error instanceof ProviderTimeoutError) {
-		void vscode.window.showErrorMessage('Groq API request timed out. Please check your connection and try again.');
+		const msg = error.message || 'AI request timed out. Please check your connection and try again.';
+		void vscode.window.showErrorMessage(msg);
 		return;
 	}
 
@@ -164,7 +166,8 @@ function showGenerationError(error: unknown): void {
 	}
 
 	if (error instanceof ProviderRateLimitError) {
-		void vscode.window.showErrorMessage('Rate limit exceeded. Please wait a moment before trying again.');
+		const msg = error.message || 'Rate limit or quota exceeded. Please wait a moment before trying again.';
+		void vscode.window.showErrorMessage(msg);
 		return;
 	}
 
@@ -179,9 +182,10 @@ function showGenerationError(error: unknown): void {
 	}
 
 	if (error instanceof ProviderError) {
-		void vscode.window.showErrorMessage('AI commit generation failed. Check the Output window for details.');
+		void vscode.window.showErrorMessage(error.message || 'AI commit generation failed. Check the Output window for details.');
 		return;
 	}
 
-	void vscode.window.showErrorMessage('Unable to generate a commit message. Please try again.');
+	const fallbackMessage = error instanceof Error ? error.message : 'Unable to generate a commit message. Please try again.';
+	void vscode.window.showErrorMessage(fallbackMessage);
 }

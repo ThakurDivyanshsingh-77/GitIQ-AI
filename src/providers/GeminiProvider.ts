@@ -2,6 +2,10 @@ import type { AIProvider } from './AIProvider';
 import type { CommitRequest, CommitResponse } from '../types/commit';
 import { Provider, type ProviderConfiguration } from '../types/provider';
 import {
+	GEMINI_API_BASE_URL,
+	GEMINI_DEFAULT_MODEL
+} from '../utils/constants';
+import {
 	ProviderAuthenticationError,
 	ProviderError,
 	ProviderRateLimitError,
@@ -9,7 +13,7 @@ import {
 } from '../utils/errors';
 import type { LoggerService } from '../services/loggerService';
 
-export const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
+export { GEMINI_DEFAULT_MODEL };
 
 /**
  * AIProvider powered by Google Gemini API via official REST interface.
@@ -27,55 +31,85 @@ export class GeminiProvider implements AIProvider {
 			throw new ProviderAuthenticationError('Gemini API key is missing. Run "GitIQ: Set Gemini API Key".');
 		}
 		this.configuration = configuration;
-		this.logger?.info(`GeminiProvider initialized (model: ${configuration.model || GEMINI_DEFAULT_MODEL}).`);
+		const model = this.resolveModel(configuration.model);
+		this.logger?.info(`GeminiProvider initialized (model: ${model}).`);
 	}
 
 	public async generateCommitMessage(request: CommitRequest): Promise<CommitResponse> {
 		if (!this.configuration?.apiKey) {
-			throw new ProviderAuthenticationError('Gemini API key is missing.');
+			throw new ProviderAuthenticationError('Gemini API key is missing. Run "GitIQ: Set Gemini API Key".');
 		}
 
-		const model = request.model ?? this.configuration.model ?? GEMINI_DEFAULT_MODEL;
-		const apiKey = this.configuration.apiKey;
-		const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+		const apiKey = this.configuration.apiKey.trim();
+		const model = this.resolveModel(request.model ?? this.configuration.model);
+		const endpoint = `${GEMINI_API_BASE_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
 		this.logger?.info(`Sending request to Google Gemini API (model: ${model})...`);
 
 		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.configuration.timeout || 30000);
+		const timeoutMs = this.configuration.timeout || 30000;
+		const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
 		try {
 			const res = await fetch(endpoint, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					'x-goog-api-key': apiKey
+				},
 				body: JSON.stringify({
 					contents: [{ parts: [{ text: request.prompt }] }],
 					generationConfig: {
 						temperature: this.configuration.temperature ?? 0.2,
-						maxOutputTokens: request.maxTokens ?? 128
+						maxOutputTokens: request.maxTokens ?? 1024
 					}
 				}),
 				signal: controller.signal
 			});
 
 			if (!res.ok) {
-				const errorBody = await res.text().catch(() => '');
-				if (res.status === 401 || res.status === 403) {
-					throw new ProviderAuthenticationError(`Invalid Gemini API key (${res.status}): ${errorBody}`);
+				const errorJson = (await res.json().catch(() => null)) as {
+					error?: {
+						code?: number;
+						message?: string;
+						status?: string;
+						details?: Array<{ reason?: string }>;
+					};
+				} | null;
+
+				const errMessage = errorJson?.error?.message || `HTTP ${res.status} ${res.statusText}`;
+				const reason = errorJson?.error?.details?.[0]?.reason;
+
+				if (
+					res.status === 401 ||
+					res.status === 403 ||
+					reason === 'API_KEY_INVALID' ||
+					/api key/i.test(errMessage)
+				) {
+					throw new ProviderAuthenticationError(`Gemini authentication failed: ${errMessage}`);
 				}
-				if (res.status === 429) {
-					throw new ProviderRateLimitError(`Gemini quota or rate limit exceeded (429): ${errorBody}`);
+				if (res.status === 429 || /quota/i.test(errMessage)) {
+					throw new ProviderRateLimitError(`Gemini rate limit or quota exceeded (429): ${errMessage}`);
 				}
-				throw new ProviderError(`Gemini API error (${res.status}): ${errorBody}`);
+				if (res.status === 404) {
+					throw new ProviderError(`Gemini model "${model}" not found (404): ${errMessage}`);
+				}
+				throw new ProviderError(`Gemini API error (${res.status}): ${errMessage}`);
 			}
 
 			const data = (await res.json()) as {
-				candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+				candidates?: Array<{
+					content?: { parts?: Array<{ text?: string }> };
+					finishReason?: string;
+				}>;
 			};
 
 			const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 			if (!text) {
-				throw new ProviderError('Gemini returned an empty response.');
+				const finishReason = data.candidates?.[0]?.finishReason;
+				throw new ProviderError(
+					`Gemini returned an empty response${finishReason ? ` (finishReason: ${finishReason})` : ''}.`
+				);
 			}
 
 			return {
@@ -85,11 +119,27 @@ export class GeminiProvider implements AIProvider {
 			};
 		} catch (error: unknown) {
 			if (error instanceof Error && error.name === 'AbortError') {
-				throw new ProviderTimeoutError('Gemini request timed out.');
+				throw new ProviderTimeoutError(`Gemini request timed out after ${timeoutMs}ms.`);
 			}
 			throw error;
 		} finally {
 			clearTimeout(timeoutId);
 		}
 	}
+
+	/**
+	 * Ensures the model name is a valid Gemini model, falling back to GEMINI_DEFAULT_MODEL
+	 * if a cross-provider model name (e.g. from Groq or Ollama) was passed.
+	 */
+	private resolveModel(configuredModel?: string): string {
+		if (!configuredModel) {
+			return GEMINI_DEFAULT_MODEL;
+		}
+		const trimmed = configuredModel.trim();
+		if (!trimmed || trimmed.startsWith('llama') || trimmed.startsWith('openai') || trimmed.startsWith('deepseek')) {
+			return GEMINI_DEFAULT_MODEL;
+		}
+		return trimmed;
+	}
 }
+

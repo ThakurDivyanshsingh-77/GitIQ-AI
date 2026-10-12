@@ -3,6 +3,7 @@ import { Provider, type ProviderConfiguration } from '../types/provider';
 import {
 	CONFIGURATION_KEYS,
 	CONFIGURATION_SECTION,
+	GEMINI_DEFAULT_MODEL,
 	GROQ_DEFAULT_MODEL,
 	LEGACY_CONFIGURATION_SECTION
 } from '../utils/constants';
@@ -49,6 +50,26 @@ export const SUPPORTED_GROQ_MODELS = [
 		targetModel: 'deepseek-r1-distill-llama-70b'
 	}
 ] as const;
+
+/** Supported Google Gemini models available in model selector. */
+export const SUPPORTED_GEMINI_MODELS = [
+	{
+		label: 'gemini-1.5-flash',
+		description: 'Recommended - High speed, multimodal, 1M context window',
+		targetModel: 'gemini-1.5-flash'
+	},
+	{
+		label: 'gemini-1.5-pro',
+		description: 'Advanced reasoning, complex problem solving, 2M context window',
+		targetModel: 'gemini-1.5-pro'
+	},
+	{
+		label: 'gemini-2.0-flash',
+		description: 'Next-gen multimodal intelligence with ultra-low latency',
+		targetModel: 'gemini-2.0-flash'
+	}
+] as const;
+
 
 /**
  * Manages secure API key storage in VS Code SecretStorage and multi-provider settings configuration.
@@ -208,28 +229,47 @@ export class SettingsService {
 	}
 
 	/**
-	 * Returns the configured model identifier from VS Code settings.
+	 * Returns the configured model identifier from VS Code settings for the active (or specified) provider.
 	 */
-	public getModel(): string {
+	public getModel(provider?: Provider): string {
+		const targetProvider = provider ?? this.getProvider();
+		if (targetProvider === Provider.Gemini) {
+			const model = this.getConfiguration().get<string>(CONFIGURATION_KEYS.geminiModel, GEMINI_DEFAULT_MODEL);
+			return model?.trim() || GEMINI_DEFAULT_MODEL;
+		}
+		if (targetProvider === Provider.Ollama) {
+			const model = this.getConfiguration().get<string>(CONFIGURATION_KEYS.ollamaModel, 'llama3.2');
+			return model?.trim() || 'llama3.2';
+		}
+		if (targetProvider === Provider.Copilot) {
+			const model = this.getConfiguration().get<string>(CONFIGURATION_KEYS.copilotFamily, '');
+			return model?.trim() || 'gpt-4o';
+		}
 		const model = this.getConfiguration().get<string>(CONFIGURATION_KEYS.model, GROQ_DEFAULT_MODEL);
-		return model.trim() || GROQ_DEFAULT_MODEL;
+		return model?.trim() || GROQ_DEFAULT_MODEL;
 	}
 
 	/**
-	 * Updates the configured model in global VS Code settings.
+	 * Updates the configured model in global VS Code settings for the active (or specified) provider.
 	 */
-	public async setModel(model: string): Promise<void> {
+	public async setModel(model: string, provider?: Provider): Promise<void> {
 		const trimmedModel = model.trim();
 		if (!trimmedModel) {
 			throw new ConfigurationError('Model name cannot be empty.');
 		}
 
-		this.logger?.info(`Updating configured model to: ${trimmedModel}`);
-		await this.getConfiguration().update(
-			CONFIGURATION_KEYS.model,
-			trimmedModel,
-			vscode.ConfigurationTarget.Global
-		);
+		const targetProvider = provider ?? this.getProvider();
+		this.logger?.info(`Updating configured model for ${targetProvider} to: ${trimmedModel}`);
+
+		const key = targetProvider === Provider.Gemini
+			? CONFIGURATION_KEYS.geminiModel
+			: (targetProvider === Provider.Ollama
+				? CONFIGURATION_KEYS.ollamaModel
+				: (targetProvider === Provider.Copilot
+					? CONFIGURATION_KEYS.copilotFamily
+					: CONFIGURATION_KEYS.model));
+
+		await this.getConfiguration().update(key, trimmedModel, vscode.ConfigurationTarget.Global);
 	}
 
 	/**
@@ -317,7 +357,7 @@ export class SettingsService {
 			}
 		}
 
-		this.logger?.info(`Configuration validated successfully (provider: ${provider}, model: ${this.getModel()}).`);
+		this.logger?.info(`Configuration validated successfully (provider: ${provider}, model: ${this.getModel(provider)}).`);
 		return true;
 	}
 
@@ -335,14 +375,14 @@ export class SettingsService {
 			apiKey = await this.getApiKey(Provider.Groq);
 			if (!apiKey) {
 				throw new ConfigurationError(
-					'Missing Groq API key. Please run "GitIQ: Set Groq API Key" or switch to GitHub Copilot.'
+					'Missing Groq API key. Please run "GitIQ: Set Groq API Key" or switch to another AI provider.'
 				);
 			}
 		} else if (provider === Provider.Gemini) {
 			apiKey = await this.getApiKey(Provider.Gemini);
 			if (!apiKey) {
 				throw new ConfigurationError(
-					'Missing Gemini API key. Please run "GitIQ: Set Gemini API Key" or switch to GitHub Copilot.'
+					'Missing Google Gemini API key. Please run "GitIQ: Set Gemini API Key" or switch to another AI provider.'
 				);
 			}
 		}
@@ -351,7 +391,7 @@ export class SettingsService {
 		return {
 			apiKey,
 			provider,
-			model: this.getModel(),
+			model: this.getModel(provider),
 			temperature: config.get<number>(CONFIGURATION_KEYS.temperature, 0.2),
 			timeout: config.get<number>(CONFIGURATION_KEYS.timeout, 30_000)
 		};

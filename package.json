@@ -282,7 +282,18 @@
           "type": "string",
           "default": "",
           "scope": "window",
-          "markdownDescription": "Google Gemini API key used when Gemini provider is selected."
+          "markdownDescription": "Google Gemini API key used when Gemini provider is selected. Store securely via command: `GitIQ: Set Gemini API Key`."
+        },
+        "gitIQ.geminiModel": {
+          "type": "string",
+          "default": "gemini-1.5-flash",
+          "enum": [
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
+            "gemini-2.0-flash"
+          ],
+          "scope": "window",
+          "description": "Model identifier used when Google Gemini provider is selected."
         },
         "gitIQ.endpoint": {
           "type": "string",

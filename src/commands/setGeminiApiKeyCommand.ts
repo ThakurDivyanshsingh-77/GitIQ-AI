@@ -28,8 +28,15 @@ export async function executeSetGeminiApiKeyCommand(
 	}
 
 	await settingsService.setApiKey(apiKey.trim(), Provider.Gemini);
-	logger?.info('Gemini API key stored successfully.');
-	void vscode.window.showInformationMessage('✓ Google Gemini API Key stored securely in SecretStorage.');
+	await settingsService.setProvider(Provider.Gemini);
+	logger?.info('Gemini API key stored and active provider switched to Gemini.');
+
+	void vscode.window.showInformationMessage(
+		'✓ Google Gemini API Key stored securely. Switched active AI provider to Google Gemini API.'
+	);
+
+	// Refresh sidebar webview to reflect active provider badge
+	void vscode.commands.executeCommand('gitIQ.refreshSidebar');
 }
 
 export function registerSetGeminiApiKeyCommand(

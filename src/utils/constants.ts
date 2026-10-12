@@ -14,6 +14,11 @@ export const CONFIGURATION_KEYS = {
 	apiKey: 'apiKey',
 	provider: 'provider',
 	model: 'model',
+	geminiApiKey: 'geminiApiKey',
+	geminiModel: 'geminiModel',
+	ollamaModel: 'ollamaModel',
+	copilotFamily: 'copilotFamily',
+	endpoint: 'endpoint',
 	temperature: 'temperature',
 	timeout: 'timeout'
 } as const;
@@ -21,6 +26,10 @@ export const CONFIGURATION_KEYS = {
 /** Default model and endpoint used by the Groq Chat Completions integration. */
 export const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 export const GROQ_CHAT_COMPLETIONS_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+
+/** Default model and endpoint used by Google Gemini integration. */
+export const GEMINI_DEFAULT_MODEL = 'gemini-1.5-flash';
+export const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /** Commit-message constraints shared by prompt construction and validation. */
 export const MAX_COMMIT_MESSAGE_LENGTH = 72;
