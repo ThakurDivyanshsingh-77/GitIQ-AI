@@ -1,6 +1,6 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { CommitMessageValidator } from '../src/services/commitMessageValidator';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { CommitMessageValidator } = require('../out/services/commitMessageValidator');
 
 test('CommitMessageValidator - Accepts valid Conventional Commit message', () => {
 	const validator = new CommitMessageValidator();

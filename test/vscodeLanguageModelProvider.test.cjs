@@ -1,13 +1,13 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { VSCodeLanguageModelProvider } from '../src/providers/VSCodeLanguageModelProvider';
-import { Provider } from '../src/types/provider';
-import {
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { VSCodeLanguageModelProvider } = require('../out/providers/VSCodeLanguageModelProvider');
+const { Provider } = require('../out/types/provider');
+const {
 	ProviderAuthenticationError,
 	ProviderError,
 	ProviderRateLimitError,
 	ProviderTimeoutError
-} from '../utils/errors';
+} = require('../out/utils/errors');
 
 test('VSCodeLanguageModelProvider - Identity and initialization', async () => {
 	const provider = new VSCodeLanguageModelProvider();
@@ -19,11 +19,11 @@ test('VSCodeLanguageModelProvider - Identity and initialization', async () => {
 
 test('VSCodeLanguageModelProvider - Error mapping for consent denied (NoPermissions)', () => {
 	const provider = new VSCodeLanguageModelProvider();
-	const handle = (provider as any).handleLanguageModelError.bind(provider);
+	const handle = provider.handleLanguageModelError.bind(provider);
 
 	assert.throws(
 		() => handle({ code: 'NoPermissions', message: 'User denied consent' }, 'copilot/gpt-4o'),
-		(err: Error) => {
+		(err) => {
 			assert.ok(err instanceof ProviderAuthenticationError);
 			assert.match(err.message, /access was not granted/i);
 			return true;
@@ -33,11 +33,11 @@ test('VSCodeLanguageModelProvider - Error mapping for consent denied (NoPermissi
 
 test('VSCodeLanguageModelProvider - Error mapping for quota exceeded (QuotaExceeded)', () => {
 	const provider = new VSCodeLanguageModelProvider();
-	const handle = (provider as any).handleLanguageModelError.bind(provider);
+	const handle = provider.handleLanguageModelError.bind(provider);
 
 	assert.throws(
 		() => handle({ code: 'QuotaExceeded', message: 'Quota limits reached' }, 'copilot/gpt-4o'),
-		(err: Error) => {
+		(err) => {
 			assert.ok(err instanceof ProviderRateLimitError);
 			assert.match(err.message, /quota exceeded/i);
 			return true;
@@ -47,11 +47,11 @@ test('VSCodeLanguageModelProvider - Error mapping for quota exceeded (QuotaExcee
 
 test('VSCodeLanguageModelProvider - Error mapping for content filtering (Blocked)', () => {
 	const provider = new VSCodeLanguageModelProvider();
-	const handle = (provider as any).handleLanguageModelError.bind(provider);
+	const handle = provider.handleLanguageModelError.bind(provider);
 
 	assert.throws(
 		() => handle({ code: 'Blocked', message: 'Sensitive content' }, 'copilot/gpt-4o'),
-		(err: Error) => {
+		(err) => {
 			assert.ok(err instanceof ProviderError);
 			assert.match(err.message, /blocked by GitHub Copilot content policy/i);
 			return true;
@@ -59,17 +59,14 @@ test('VSCodeLanguageModelProvider - Error mapping for content filtering (Blocked
 	);
 });
 
-test('VSCodeLanguageModelProvider - Error mapping for cancellation', () => {
+test('VSCodeLanguageModelProvider - Error mapping for generic error with authorization keywords', () => {
 	const provider = new VSCodeLanguageModelProvider();
-	const handle = (provider as any).handleLanguageModelError.bind(provider);
+	const handle = provider.handleLanguageModelError.bind(provider);
 
-	// Mock CancellationError
-	class MockCancellationError extends Error {}
-	// Since vscode is mocked/unavailable in pure unit test, test generic string check or class
 	assert.throws(
-		() => handle(new Error('The user cancelled the request'), 'copilot/gpt-4o'),
-		(err: Error) => {
-			assert.ok(err instanceof ProviderError);
+		() => handle(new Error('User consent was not authorized'), 'copilot/gpt-4o'),
+		(err) => {
+			assert.ok(err instanceof ProviderAuthenticationError);
 			return true;
 		}
 	);

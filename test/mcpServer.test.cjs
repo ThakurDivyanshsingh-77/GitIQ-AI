@@ -1,7 +1,7 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import * as path from 'node:path';
-import { GitIqMcpServer } from '../src/mcp/gitIqMcpServer';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const { GitIqMcpServer } = require('../out/mcp/gitIqMcpServer');
 
 test('GitIqMcpServer - Exposes all 6 required tools', () => {
 	const server = new GitIqMcpServer();

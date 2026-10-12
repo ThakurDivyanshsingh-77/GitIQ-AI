@@ -359,7 +359,7 @@
     "package:mcp": "esbuild ./src/mcp/server.ts --bundle --minify --outfile=out/mcp/server.js --format=cjs --platform=node",
     "package": "npm run package:ext && npm run package:mcp",
     "lint": "eslint src --ext ts",
-    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "test": "node --test test/*.test.cjs",
     "mcp": "node ./out/mcp/server.js",
     "check": "npm run compile && npm run lint && npm run test && npm run package"
   },

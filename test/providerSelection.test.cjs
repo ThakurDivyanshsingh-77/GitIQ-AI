@@ -1,50 +1,46 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { SettingsService, SECRET_STORAGE_API_KEY, SECRET_STORAGE_GEMINI_API_KEY } from '../src/services/SettingsService';
-import { Provider } from '../src/types/provider';
-import { ConfigurationError } from '../src/utils/errors';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { SettingsService, SECRET_STORAGE_API_KEY, SECRET_STORAGE_GEMINI_API_KEY } = require('../out/services/SettingsService');
+const { Provider } = require('../out/types/provider');
+const { ConfigurationError } = require('../out/utils/errors');
 
-/** In-memory mock for VS Code SecretStorage */
 class MockSecretStorage {
-	private readonly store = new Map<string, string>();
-
-	public async get(key: string): Promise<string | undefined> {
+	constructor() {
+		this.store = new Map();
+	}
+	async get(key) {
 		return this.store.get(key);
 	}
-
-	public async store(key: string, value: string): Promise<void> {
+	async store(key, value) {
 		this.store.set(key, value);
 	}
-
-	public async delete(key: string): Promise<void> {
+	async delete(key) {
 		this.store.delete(key);
 	}
 }
 
-/** In-memory mock for VS Code WorkspaceConfiguration */
-function createMockSettingsService(initialProvider: Provider = Provider.Groq) {
+function createMockSettingsService(initialProvider = Provider.Groq) {
 	const secrets = new MockSecretStorage();
 	let currentProvider = initialProvider;
 	let currentModel = 'llama-3.3-70b-versatile';
 
-	const service = new SettingsService(secrets as any);
+	const service = new SettingsService(secrets);
 
-	// Override configuration getter for isolated testing
-	(service as any).getConfiguration = () => ({
-		get: (key: string, defaultValue?: any) => {
+	service.getConfiguration = () => ({
+		get: (key, defaultValue) => {
 			if (key === 'provider') return currentProvider;
 			if (key === 'model') return currentModel;
 			if (key === 'temperature') return 0.2;
 			if (key === 'timeout') return 30000;
 			return defaultValue;
 		},
-		update: async (key: string, value: any) => {
+		update: async (key, value) => {
 			if (key === 'provider') currentProvider = value;
 			if (key === 'model') currentModel = value;
 		}
 	});
 
-	return { service, secrets, setProvider: (p: Provider) => { currentProvider = p; } };
+	return { service, secrets, setProvider: (p) => { currentProvider = p; } };
 }
 
 test('Provider Selection - Default provider resolution', () => {
@@ -62,7 +58,6 @@ test('Provider Selection - Copilot snapshot requires NO API key', async () => {
 	const { service, setProvider } = createMockSettingsService();
 	setProvider(Provider.Copilot);
 
-	// Does not throw despite empty secrets
 	const snapshot = await service.getConfigurationSnapshot();
 	assert.equal(snapshot.provider, Provider.Copilot);
 	assert.equal(snapshot.apiKey, '');
@@ -83,7 +78,7 @@ test('Provider Selection - Groq throws ConfigurationError when API key is missin
 
 	await assert.rejects(
 		async () => service.getConfigurationSnapshot(),
-		(err: Error) => {
+		(err) => {
 			assert.ok(err instanceof ConfigurationError);
 			assert.match(err.message, /Missing Groq API key/);
 			return true;
