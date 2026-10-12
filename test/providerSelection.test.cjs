@@ -1,3 +1,4 @@
+require('./mockVscode.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { SettingsService, SECRET_STORAGE_API_KEY, SECRET_STORAGE_GEMINI_API_KEY } = require('../out/services/SettingsService');
@@ -6,16 +7,16 @@ const { ConfigurationError } = require('../out/utils/errors');
 
 class MockSecretStorage {
 	constructor() {
-		this.store = new Map();
+		this.data = new Map();
 	}
 	async get(key) {
-		return this.store.get(key);
+		return this.data.get(key);
 	}
 	async store(key, value) {
-		this.store.set(key, value);
+		this.data.set(key, value);
 	}
 	async delete(key) {
-		this.store.delete(key);
+		this.data.delete(key);
 	}
 }
 
@@ -87,9 +88,9 @@ test('Provider Selection - Groq throws ConfigurationError when API key is missin
 });
 
 test('Provider Selection - Groq snapshot succeeds with valid API key', async () => {
-	const { service, secrets, setProvider } = createMockSettingsService();
+	const { service, setProvider } = createMockSettingsService();
 	setProvider(Provider.Groq);
-	await secrets.store(SECRET_STORAGE_API_KEY, 'gsk_test1234567890abcdef');
+	await service.setApiKey('gsk_test1234567890abcdef', Provider.Groq);
 
 	const snapshot = await service.getConfigurationSnapshot();
 	assert.equal(snapshot.provider, Provider.Groq);
@@ -97,9 +98,9 @@ test('Provider Selection - Groq snapshot succeeds with valid API key', async () 
 });
 
 test('Provider Selection - Gemini key storage and snapshot', async () => {
-	const { service, secrets, setProvider } = createMockSettingsService();
+	const { service, setProvider } = createMockSettingsService();
 	setProvider(Provider.Gemini);
-	await secrets.store(SECRET_STORAGE_GEMINI_API_KEY, 'AIzaSyTestGeminiKey123');
+	await service.setApiKey('AIzaSyTestGeminiKey123', Provider.Gemini);
 
 	const snapshot = await service.getConfigurationSnapshot();
 	assert.equal(snapshot.provider, Provider.Gemini);

@@ -37,8 +37,8 @@ export class CommitMessageValidator {
 
 		text = lines[0] || '';
 
-		// 3. Remove common introductory labels/prefixes (e.g., "Commit message:", "Subject:", "- ")
-		text = text.replace(/^(?:here is the |suggested |commit message|subject|commit|message):\s*/i, '');
+		// 3. Remove common introductory labels/prefixes (e.g., "Here is the suggested commit message:", "Subject:", "- ")
+		text = text.replace(/^(?:(?:here\s+is\s+(?:the\s+)?)?(?:suggested\s+)?(?:commit\s+message|subject|commit|message)|here\s+is\s+the|suggested):\s*/i, '');
 		text = text.replace(/^(?:[-*+>]|\d+\.)\s*/, '');
 
 		// 4. Remove surrounding quotes ("...", '...', `...`)

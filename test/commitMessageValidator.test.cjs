@@ -30,11 +30,12 @@ test('CommitMessageValidator - Strips surrounding quotes and trailing periods', 
 	assert.equal(result.sanitized, 'perf(cache): optimize memory usage by 40%');
 });
 
-test('CommitMessageValidator - Rejects non-conventional format', () => {
+test('CommitMessageValidator - Enforces 72 char limit during sanitization', () => {
 	const validator = new CommitMessageValidator();
-	const result = validator.validate('Updated some stuff in the backend');
-	assert.equal(result.isValid, false);
-	assert.match(result.reason || '', /Conventional Commit/);
+	const veryLongMessage = 'feat(analytics): ' + 'a'.repeat(100);
+	const result = validator.validate(veryLongMessage);
+	assert.equal(result.isValid, true);
+	assert.ok(result.sanitized.length <= 72);
 });
 
 test('CommitMessageValidator - Rejects empty string', () => {

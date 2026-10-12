@@ -1,3 +1,4 @@
+require('./mockVscode.cjs');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { VSCodeLanguageModelProvider } = require('../out/providers/VSCodeLanguageModelProvider');
