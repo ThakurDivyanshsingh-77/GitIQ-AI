@@ -145,6 +145,6 @@ export function startMcpServer(): void {
 }
 
 // Auto-start when executed directly
-if (require.main === module) {
+if (typeof process !== 'undefined' && process.argv[1]?.includes('server')) {
 	startMcpServer();
 }

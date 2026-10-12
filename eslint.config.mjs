@@ -21,6 +21,7 @@ export default [
         clearTimeout: 'readonly',
         console: 'readonly',
         fetch: 'readonly',
+        process: 'readonly',
         Response: 'readonly',
         setTimeout: 'readonly'
       }
@@ -29,7 +30,8 @@ export default [
       '@typescript-eslint': tseslint
     },
     rules: {
-      ...tseslint.configs.recommended.rules
+      ...tseslint.configs.recommended.rules,
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }
   }
 ];
