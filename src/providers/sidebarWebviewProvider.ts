@@ -1525,23 +1525,27 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				return;
 			}
 
-			// 2. Action cards and sub-item buttons
-			var actionBtn = e.target.closest('.action-card, .sub-item-btn');
-			if (actionBtn) {
-				var cmd = actionBtn.getAttribute('data-cmd');
+			// 2. Action cards and sub-item buttons with data-cmd
+			var cmdBtn = e.target.closest('[data-cmd]');
+			if (cmdBtn) {
+				var cmd = cmdBtn.getAttribute('data-cmd');
 				if (cmd) {
 					vscode.postMessage({ command: cmd });
 				}
 				return;
 			}
 
-			// 3. Repo action row buttons
-			var repoBtn = e.target.closest('.repo-action-btn');
-			if (repoBtn) {
-				var action = repoBtn.getAttribute('data-action');
+			// 3. Actions with data-action attribute
+			var actionBtn = e.target.closest('[data-action]');
+			if (actionBtn) {
+				var action = actionBtn.getAttribute('data-action');
 				if (action === 'openFolder') openFolder();
 				else if (action === 'initGit') initGit();
 				else if (action === 'retryDetection') retryDetection();
+				else if (action === 'selectRepo') vscode.postMessage({ command: 'selectRepo' });
+				else if (action === 'dismissReview') dismissReview();
+				else if (action === 'reviewAgain') runReviewAgain();
+				else if (action === 'openReport') openReport();
 				return;
 			}
 
@@ -1562,24 +1566,14 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				return;
 			}
 
-			// 6. Review panel buttons
-			var reviewBtn = e.target.closest('.review-btn, .review-dismiss-btn');
-			if (reviewBtn) {
-				var revAction = reviewBtn.getAttribute('data-action');
-				if (revAction === 'dismissReview') dismissReview();
-				else if (revAction === 'reviewAgain') runReviewAgain();
-				else if (revAction === 'openReport') openReport();
-				return;
-			}
-
-			// 7. Refresh button
+			// 6. Refresh button
 			var refreshBtn = e.target.closest('#refreshBtn');
 			if (refreshBtn) {
 				retryDetection();
 				return;
 			}
 
-			// 8. Switch repo button
+			// 7. Switch repo button
 			var switchBtn = e.target.closest('#switchRepoBtn');
 			if (switchBtn) {
 				vscode.postMessage({ command: 'selectRepo' });
@@ -1654,15 +1648,15 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 						repoActionRowEl.style.display = 'flex';
 						if (state.hasWorkspace) {
 							repoActionRowEl.innerHTML =
-								'<button class="repo-action-btn primary" onclick="initGit()">' +
+								'<button class="repo-action-btn primary" data-action="initGit">' +
 									'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Initialize Repository' +
 								'</button>' +
-								'<button class="repo-action-btn" onclick="openFolder()">' +
+								'<button class="repo-action-btn" data-action="openFolder">' +
 									'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Open Folder' +
 								'</button>';
 						} else {
 							repoActionRowEl.innerHTML =
-								'<button class="repo-action-btn primary" onclick="openFolder()">' +
+								'<button class="repo-action-btn primary" data-action="openFolder">' +
 									'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Open Folder' +
 								'</button>';
 						}
@@ -1676,7 +1670,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 					if (repoActionRowEl) {
 						repoActionRowEl.style.display = 'flex';
 						repoActionRowEl.innerHTML =
-							'<button class="repo-action-btn primary" onclick="retryDetection()">' +
+							'<button class="repo-action-btn primary" data-action="retryDetection">' +
 								'↻ Retry Detection' +
 							'</button>';
 					}
@@ -1689,7 +1683,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 					if (repoActionRowEl) {
 						repoActionRowEl.style.display = 'flex';
 						repoActionRowEl.innerHTML =
-							'<button class="repo-action-btn primary" onclick="retryDetection()">' +
+							'<button class="repo-action-btn primary" data-action="retryDetection">' +
 								'↻ Retry Detection' +
 							'</button>';
 					}
@@ -1712,8 +1706,8 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 					if (repoActionRowEl) {
 						repoActionRowEl.style.display = 'flex';
 						repoActionRowEl.innerHTML =
-							'<button class="repo-action-btn primary" onclick="initGit()">Initialize Repository</button>' +
-							'<button class="repo-action-btn" onclick="openFolder()">Open Folder</button>';
+							'<button class="repo-action-btn primary" data-action="initGit">Initialize Repository</button>' +
+							'<button class="repo-action-btn" data-action="openFolder">Open Folder</button>';
 					}
 				} else {
 					clearWatchdog();
@@ -1724,7 +1718,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 					if (repoActionRowEl) {
 						repoActionRowEl.style.display = 'flex';
 						repoActionRowEl.innerHTML =
-							'<button class="repo-action-btn primary" onclick="openFolder()">Open Folder</button>';
+							'<button class="repo-action-btn primary" data-action="openFolder">Open Folder</button>';
 					}
 				}
 
@@ -1799,13 +1793,13 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 						}
 						return (
 							'<div class="finding-card" id="' + f.id + '">' +
-								'<div class="finding-header" onclick="toggleFinding(this)">' +
+								'<div class="finding-header">' +
 									'<div class="finding-title-row">' +
 										'<span class="finding-title">' + escapeHtml(f.title) + '</span>' +
 										'<span class="severity-pill ' + sevClass + '">' + escapeHtml(f.severity) + '</span>' +
 									'</div>' +
 									'<div class="finding-meta">' +
-										'<span class="finding-file-link" data-file="' + escapeHtml(f.file) + '" data-line="' + (f.line || 1) + '" onclick="openFile(event, this)">' +
+										'<span class="finding-file-link" data-file="' + escapeHtml(f.file) + '" data-line="' + (f.line || 1) + '">' +
 											'📄 ' + locText +
 										'</span>' +
 										'<span>•</span>' +
@@ -1829,7 +1823,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 						'</div>' +
 						'<div style="display: flex; align-items: center; gap: 6px;">' +
 							'<div class="review-target-badge">' + escapeHtml(sum.targetLabel) + '</div>' +
-							'<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>' +
+							'<button class="review-dismiss-btn" data-action="dismissReview">✕</button>' +
 						'</div>' +
 					'</div>' +
 					'<div class="severity-counts">' +
@@ -1843,10 +1837,10 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 						findingsHtml +
 					'</div>' +
 					'<div class="review-actions-row">' +
-						'<button class="review-btn" onclick="runReviewAgain()">' +
+						'<button class="review-btn" data-action="reviewAgain">' +
 							'↻ Re-run' +
 						'</button>' +
-						'<button class="review-btn primary" onclick="openReport()">' +
+						'<button class="review-btn primary" data-action="openReport">' +
 							'Open Report' +
 						'</button>' +
 					'</div>';
@@ -1855,27 +1849,27 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				panel.innerHTML =
 					'<div class="review-header-row">' +
 						'<div class="review-header-title">AI Code Review</div>' +
-						'<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>' +
+						'<button class="review-dismiss-btn" data-action="dismissReview">✕</button>' +
 					'</div>' +
 					'<div class="review-summary-text">' +
 						escapeHtml(state.message || 'No reviewable changes found in repository.') +
 					'</div>' +
 					'<div class="review-actions-row">' +
-						'<button class="review-btn primary" onclick="runReviewAgain()">Check Again</button>' +
+						'<button class="review-btn primary" data-action="reviewAgain">Check Again</button>' +
 					'</div>';
 			} else if (state.status === 'error') {
 				panel.style.display = 'flex';
 				panel.innerHTML =
 					'<div class="review-header-row">' +
 						'<div class="review-header-title" style="color: #ff7b72;">Review Failed</div>' +
-						'<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>' +
+						'<button class="review-dismiss-btn" data-action="dismissReview">✕</button>' +
 					'</div>' +
 					'<div class="review-summary-text" style="border-left-color: #ff7b72;">' +
 						escapeHtml(state.error || 'Unknown error occurred.') +
 					'</div>' +
 					'<div class="review-actions-row">' +
-						'<button class="review-btn primary" onclick="runReviewAgain()">Retry</button>' +
-						'<button class="review-btn" onclick="dismissReview()">Dismiss</button>' +
+						'<button class="review-btn primary" data-action="reviewAgain">Retry</button>' +
+						'<button class="review-btn" data-action="dismissReview">Dismiss</button>' +
 					'</div>';
 			}
 		}

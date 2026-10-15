@@ -321,6 +321,11 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
        - Fixed two SyntaxErrors inside the Webview `<script>` block in `sidebarWebviewProvider.ts`: a missing closing brace on `if (f.codeSuggestion)` in `renderCodeReviewState()` and a missing opening quote on `'</div>' +` in the review header HTML template. These syntax errors had prevented the entire script from executing in the webview, causing all button and accordion click listeners to fail.
        - Added explicit `addEventListener` click listeners to all `.tool-header` elements to toggle `.tool-accordion` regardless of inline `onclick` handling restrictions in VS Code webviews.
        - Exported helper methods (`toggleAccordion`, `retryDetection`, `openFolder`, `initGit`, `toggleFinding`, `openFile`, `dismissReview`, `runReviewAgain`, `openReport`) onto `window`.
+    10. **Webview CSP Nonce & Complete Removal of Inline `onclick`**:
+       - Added CSP `<meta>` tag with random cryptographic nonce and matching `<script nonce="${nonce}">` to strictly comply with VS Code webview security.
+       - Removed every remaining inline `onclick` attribute across dynamic HTML elements (`updateRepoState`, `renderCodeReviewState`, action rows) and replaced them with `data-action` attributes.
+       - Implemented clean, unified event delegation on `document.addEventListener('click', ...)` handling `[data-cmd]`, `[data-action]`, `.tool-header`, `.finding-header`, `.finding-file-link`, `#refreshBtn`, and `#switchRepoBtn`.
+       - Re-bundled `out/extension.js` via `npm run compile` and verified zero syntax errors in webview script (`checkScript.js`) and 100% tests passing (`68/68 passed`).
 
 ---
 
