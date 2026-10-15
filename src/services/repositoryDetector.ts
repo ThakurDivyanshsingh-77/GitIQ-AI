@@ -48,8 +48,12 @@ export class RepositoryDetector implements vscode.Disposable {
 
 	private _selectedRepoId?: string;
 	private _gitApi?: GitAPI;
-	private _detectionSeq = 0;
 	private _isDisposed = false;
+
+	// Single-flight and debouncing management
+	private _inFlightDetectionPromise?: Promise<RepositoryDetectionState>;
+	private _rerunAfterInFlight = false;
+	private _debounceTimer?: ReturnType<typeof setTimeout>;
 
 	/** Emits whenever the detected repository state or selection changes. */
 	public readonly onDidChangeState = this._stateEmitter.event;
@@ -74,13 +78,24 @@ export class RepositoryDetector implements vscode.Disposable {
 	}
 
 	/**
+	 * Normalizes file paths for reliable cross-platform comparison (case-insensitive drive letters on Windows).
+	 */
+	public normalizePath(p: string): string {
+		const normalized = path.normalize(p);
+		if (process.platform === 'win32' && /^[a-zA-Z]:/.test(normalized)) {
+			return normalized[0].toLowerCase() + normalized.slice(1);
+		}
+		return normalized;
+	}
+
+	/**
 	 * Initializes extension host event listeners (workspace folders, active editor).
 	 */
 	private initEventListeners(): void {
 		this._disposables.push(
 			vscode.workspace.onDidChangeWorkspaceFolders(() => {
 				this.logger?.info('Workspace folders changed, refreshing repository detection...');
-				void this.detectRepositories();
+				void this.scheduleDetection(100);
 			}),
 			vscode.window.onDidChangeActiveTextEditor((editor) => {
 				if (editor && editor.document && editor.document.uri.scheme === 'file') {
@@ -88,6 +103,23 @@ export class RepositoryDetector implements vscode.Disposable {
 				}
 			})
 		);
+	}
+
+	/**
+	 * Schedules debounced detection to prevent race conditions and redundant process spawns.
+	 */
+	public scheduleDetection(delayMs: number = 100): Promise<RepositoryDetectionState> {
+		if (this._debounceTimer) {
+			clearTimeout(this._debounceTimer);
+			this._debounceTimer = undefined;
+		}
+
+		return new Promise<RepositoryDetectionState>((resolve) => {
+			this._debounceTimer = setTimeout(() => {
+				this._debounceTimer = undefined;
+				resolve(this.detectRepositories());
+			}, delayMs);
+		});
 	}
 
 	/**
@@ -110,30 +142,60 @@ export class RepositoryDetector implements vscode.Disposable {
 				await extension.activate();
 			}
 
+			if (!extension.exports || typeof extension.exports.getAPI !== 'function') {
+				this.logger?.warn('Built-in VS Code Git extension does not export getAPI().');
+				return undefined;
+			}
+
 			const api = extension.exports.getAPI(1);
 			this._gitApi = api;
 
-			// Subscribe to Git API life-cycle events
+			// If API is uninitialized, wait briefly for initialization event
+			if (api.state === 'uninitialized') {
+				await new Promise<void>((resolve) => {
+					let resolved = false;
+					const timer = setTimeout(() => {
+						if (!resolved) {
+							resolved = true;
+							disposable.dispose();
+							resolve();
+						}
+					}, 1500);
+
+					const disposable = api.onDidChangeState((s) => {
+						if (s === 'initialized' && !resolved) {
+							resolved = true;
+							clearTimeout(timer);
+							disposable.dispose();
+							resolve();
+						}
+					});
+				});
+			}
+
+			// Subscribe to Git API life-cycle events with debounced scheduling
 			this._disposables.push(
 				api.onDidOpenRepository((repo) => {
 					this.logger?.info(`Git repository opened: ${repo.rootUri.fsPath}`);
 					this.attachRepoListener(repo);
-					void this.detectRepositories();
+					void this.scheduleDetection(50);
 				}),
 				api.onDidCloseRepository((repo) => {
 					this.logger?.info(`Git repository closed: ${repo.rootUri.fsPath}`);
 					this.detachRepoListener(repo.rootUri.fsPath);
-					void this.detectRepositories();
+					void this.scheduleDetection(50);
 				}),
 				api.onDidChangeState((gitState) => {
 					this.logger?.info(`VS Code Git API state changed: ${gitState}`);
-					void this.detectRepositories();
+					void this.scheduleDetection(50);
 				})
 			);
 
 			// Attach to any initially known repositories
-			for (const repo of api.repositories) {
-				this.attachRepoListener(repo);
+			if (Array.isArray(api.repositories)) {
+				for (const repo of api.repositories) {
+					this.attachRepoListener(repo);
+				}
 			}
 
 			return api;
@@ -148,38 +210,41 @@ export class RepositoryDetector implements vscode.Disposable {
 	 * Attaches state change listeners to a specific VS Code Git repository.
 	 */
 	private attachRepoListener(repo: Repository): void {
-		const repoPath = repo.rootUri.fsPath;
-		if (this._repoDisposables.has(repoPath)) {
+		const repoKey = this.normalizePath(repo.rootUri.fsPath);
+		if (this._repoDisposables.has(repoKey)) {
 			return;
 		}
 
 		const disposables: vscode.Disposable[] = [];
 		try {
-			disposables.push(
-				repo.state.onDidChange(() => {
-					this.logger?.info(`Git state changed for repository: ${repoPath}`);
-					void this.detectRepositories();
-				})
-			);
-			if (repo.ui && repo.ui.onDidChange) {
+			if (repo.state && typeof repo.state.onDidChange === 'function') {
+				disposables.push(
+					repo.state.onDidChange(() => {
+						this.logger?.info(`Git state changed for repository: ${repo.rootUri.fsPath}`);
+						void this.scheduleDetection(50);
+					})
+				);
+			}
+			if (repo.ui && typeof repo.ui.onDidChange === 'function') {
 				disposables.push(
 					repo.ui.onDidChange(() => {
 						if (repo.ui.selected) {
-							this._selectedRepoId = repoPath;
-							void this.detectRepositories();
+							this._selectedRepoId = repo.rootUri.fsPath;
+							void this.scheduleDetection(50);
 						}
 					})
 				);
 			}
 		} catch (err: unknown) {
-			this.logger?.warn(`Could not attach state listener to repo ${repoPath}: ${String(err)}`);
+			this.logger?.warn(`Could not attach state listener to repo ${repo.rootUri.fsPath}: ${String(err)}`);
 		}
 
-		this._repoDisposables.set(repoPath, disposables);
+		this._repoDisposables.set(repoKey, disposables);
 	}
 
 	private detachRepoListener(repoPath: string): void {
-		const disposables = this._repoDisposables.get(repoPath);
+		const repoKey = this.normalizePath(repoPath);
+		const disposables = this._repoDisposables.get(repoKey);
 		if (disposables) {
 			for (const d of disposables) {
 				try {
@@ -188,7 +253,7 @@ export class RepositoryDetector implements vscode.Disposable {
 					// Ignore disposal error
 				}
 			}
-			this._repoDisposables.delete(repoPath);
+			this._repoDisposables.delete(repoKey);
 		}
 	}
 
@@ -200,9 +265,10 @@ export class RepositoryDetector implements vscode.Disposable {
 			return;
 		}
 
-		const filePath = fileUri.fsPath;
+		const filePathNorm = this.normalizePath(fileUri.fsPath);
 		const matchingRepo = this._state.allRepos.find((r) => {
-			const relative = path.relative(r.rootPath, filePath);
+			const rootNorm = this.normalizePath(r.rootPath);
+			const relative = path.relative(rootNorm, filePathNorm);
 			return !relative.startsWith('..') && !path.isAbsolute(relative);
 		});
 
@@ -218,18 +284,40 @@ export class RepositoryDetector implements vscode.Disposable {
 	}
 
 	/**
-	 * Main repository detection entry point. Discovers repositories via Git API and fallback,
-	 * handles multi-root workspaces and subfolders, and updates lifecycle state.
+	 * Main repository detection entry point.
+	 * Utilizes single-flight execution so concurrent callers share in-flight detection
+	 * without invalidating or cancelling state updates.
 	 */
 	public async detectRepositories(): Promise<RepositoryDetectionState> {
 		if (this._isDisposed) {
 			return this._state;
 		}
 
-		const currentSeq = ++this._detectionSeq;
+		// If a detection cycle is already running, join it and schedule follow-up if needed
+		if (this._inFlightDetectionPromise) {
+			this._rerunAfterInFlight = true;
+			return this._inFlightDetectionPromise;
+		}
 
-		// Immediately broadcast "detecting" state if not already in that state
-		if (this._state.status !== 'detecting') {
+		this._inFlightDetectionPromise = this.runDetectionCycle();
+
+		try {
+			const result = await this._inFlightDetectionPromise;
+			return result;
+		} finally {
+			this._inFlightDetectionPromise = undefined;
+			if (this._rerunAfterInFlight && !this._isDisposed) {
+				this._rerunAfterInFlight = false;
+				void this.scheduleDetection(50);
+			}
+		}
+	}
+
+	/**
+	 * Executes a single detection cycle wrapped in timeout protection.
+	 */
+	private async runDetectionCycle(): Promise<RepositoryDetectionState> {
+		if (this._state.status !== 'detected' && this._state.status !== 'detecting') {
 			this.updateState({
 				status: 'detecting',
 				activeRepo: this._state.activeRepo,
@@ -237,41 +325,50 @@ export class RepositoryDetector implements vscode.Disposable {
 			});
 		}
 
-		const detectionPromise = this.executeDetection(currentSeq);
+		const timeoutMs = 8000;
+		let timerId: ReturnType<typeof setTimeout> | undefined;
+
 		const timeoutPromise = new Promise<RepositoryDetectionState>((resolve) => {
-			setTimeout(() => {
-				if (currentSeq === this._detectionSeq && !this._isDisposed) {
-					this.logger?.warn('Repository detection timed out after 10 seconds.');
-					resolve({
-						status: 'detection-failed',
-						allRepos: [],
-						errorMessage: 'Repository detection timed out. Please click refresh.'
-					});
-				}
-			}, 10000);
+			timerId = setTimeout(() => {
+				this.logger?.warn(`Repository detection timed out after ${timeoutMs / 1000}s.`);
+				resolve({
+					status: 'detection-failed',
+					allRepos: [],
+					errorMessage: 'Repository detection timed out. Please check Git and click Retry.'
+				});
+			}, timeoutMs);
 		});
 
 		try {
+			const detectionPromise = this.executeDetection();
 			const result = await Promise.race([detectionPromise, timeoutPromise]);
-			if (currentSeq === this._detectionSeq && !this._isDisposed) {
+			if (timerId) {
+				clearTimeout(timerId);
+			}
+
+			if (!this._isDisposed) {
 				this.updateState(result);
 			}
 			return this._state;
 		} catch (error: unknown) {
-			if (currentSeq === this._detectionSeq && !this._isDisposed) {
-				const msg = error instanceof Error ? error.message : String(error);
-				this.logger?.error(`Repository detection failed unexpectedly: ${msg}`);
-				this.updateState({
-					status: 'detection-failed',
-					allRepos: [],
-					errorMessage: msg
-				});
+			if (timerId) {
+				clearTimeout(timerId);
 			}
-			return this._state;
+			const msg = error instanceof Error ? error.message : String(error);
+			this.logger?.error(`Repository detection failed unexpectedly: ${msg}`);
+			const errState: RepositoryDetectionState = {
+				status: 'detection-failed',
+				allRepos: [],
+				errorMessage: msg || 'Unexpected error occurred during repository detection.'
+			};
+			if (!this._isDisposed) {
+				this.updateState(errState);
+			}
+			return errState;
 		}
 	}
 
-	private async executeDetection(seq: number): Promise<RepositoryDetectionState> {
+	private async executeDetection(): Promise<RepositoryDetectionState> {
 		const workspaceFolders = vscode.workspace.workspaceFolders;
 		if (!workspaceFolders || workspaceFolders.length === 0) {
 			this.logger?.info('No workspace folders open in VS Code.');
@@ -282,67 +379,106 @@ export class RepositoryDetector implements vscode.Disposable {
 			};
 		}
 
-		// Ensure Git API connection is established
+		// 1. Initialize VS Code Git extension API
 		const gitApi = await this.initGitExtension();
 
-		if (seq !== this._detectionSeq || this._isDisposed) {
+		if (this._isDisposed) {
 			return this._state;
 		}
 
 		const detectedMap = new Map<string, DetectedRepoInfo>();
 
-		// 1. Gather repositories from VS Code Git API
+		// 2. Discover repositories from official VS Code Git extension API
 		if (gitApi) {
-			for (const repo of gitApi.repositories) {
-				this.attachRepoListener(repo);
-				const info = this.extractFromGitApiRepo(repo);
-				detectedMap.set(info.rootPath, info);
-			}
-		}
-
-		// 2. Check each workspace folder and its subfolders
-		for (const folder of workspaceFolders) {
-			const folderPath = folder.uri.fsPath;
-
-			// If gitApi can give us a repository directly for this folder URI
-			if (gitApi) {
-				const folderRepo = gitApi.getRepository(folder.uri);
-				if (folderRepo) {
-					this.attachRepoListener(folderRepo);
-					const info = this.extractFromGitApiRepo(folderRepo);
-					detectedMap.set(info.rootPath, info);
+			// First add any already tracked repositories in gitApi
+			if (Array.isArray(gitApi.repositories)) {
+				for (const repo of gitApi.repositories) {
+					this.attachRepoListener(repo);
+					const info = this.extractFromGitApiRepo(repo);
+					detectedMap.set(this.normalizePath(info.rootPath), info);
 				}
 			}
 
-			// If not detected via Git API, try CLI GitService fallback on the folder
-			if (!detectedMap.has(folderPath) && this.gitService) {
-				const isRepo = await this.gitService.isGitRepository(folderPath);
+			// Explicitly check/open repositories for each workspace folder
+			for (const folder of workspaceFolders) {
+				let folderRepo = gitApi.getRepository(folder.uri);
+
+				// If not yet opened by VS Code Git extension, try opening it
+				if (!folderRepo && typeof gitApi.openRepository === 'function') {
+					try {
+						folderRepo = await gitApi.openRepository(folder.uri);
+					} catch (err: unknown) {
+						this.logger?.warn(`gitApi.openRepository error for "${folder.uri.fsPath}": ${String(err)}`);
+					}
+				}
+
+				if (folderRepo) {
+					this.attachRepoListener(folderRepo);
+					const info = this.extractFromGitApiRepo(folderRepo);
+					detectedMap.set(this.normalizePath(info.rootPath), info);
+				}
+			}
+		}
+
+		// 3. CLI fallback for workspace folders not recognized by Git API
+		for (const folder of workspaceFolders) {
+			const folderPath = folder.uri.fsPath;
+			const folderKey = this.normalizePath(folderPath);
+
+			// Check if already covered by an existing detected repo
+			const alreadyCovered = Array.from(detectedMap.values()).some((r) => {
+				const rel = path.relative(this.normalizePath(r.rootPath), folderKey);
+				return !rel.startsWith('..') && !path.isAbsolute(rel);
+			});
+
+			if (!alreadyCovered && this.gitService) {
+				// Check if directory belongs to a git worktree or has .git file/folder
+				let isRepo = await this.gitService.isGitRepository(folderPath);
+				if (!isRepo) {
+					isRepo = await this.isGitDirectoryOrFile(folderPath);
+				}
+
 				if (isRepo) {
-					const info = await this.extractFromGitService(folderPath);
-					detectedMap.set(info.rootPath, info);
+					let repoPath = folderPath;
+					if (typeof this.gitService.getTopLevel === 'function') {
+						try {
+							const top = await this.gitService.getTopLevel(folderPath);
+							if (top) {
+								repoPath = top;
+							}
+						} catch {
+							repoPath = folderPath;
+						}
+					}
+					const info = await this.extractFromGitService(repoPath);
+					detectedMap.set(this.normalizePath(info.rootPath), info);
 				} else {
-					// Check immediate subdirectories for nested repositories (e.g. monorepo / subproject)
+					// Scan immediate subfolders (for monorepos or nested subprojects)
 					await this.scanSubfoldersForGit(folderPath, detectedMap);
 				}
 			}
 		}
 
-		if (seq !== this._detectionSeq || this._isDisposed) {
+		if (this._isDisposed) {
 			return this._state;
 		}
 
 		const allRepos = Array.from(detectedMap.values());
 
 		if (allRepos.length === 0) {
-			// If gitApi is absent and gitService couldn't detect anything, check if git CLI is working
-			if (!gitApi && this.gitService) {
-				const gitInstalled = await this.checkIfGitInstalled();
-				if (!gitInstalled) {
-					return {
-						status: 'git-unavailable',
-						allRepos: [],
-						errorMessage: 'Git is not installed or the VS Code Git extension is unavailable.'
-					};
+			// Check if Git CLI is available
+			if (this.gitService && typeof this.gitService.isGitInstalled === 'function') {
+				try {
+					const gitInstalled = await this.gitService.isGitInstalled();
+					if (!gitInstalled && !gitApi) {
+						return {
+							status: 'git-unavailable',
+							allRepos: [],
+							errorMessage: 'Git is not installed or the VS Code Git extension is unavailable.'
+						};
+					}
+				} catch {
+					// Fall through to no-repo
 				}
 			}
 
@@ -363,9 +499,9 @@ export class RepositoryDetector implements vscode.Disposable {
 		if (!activeRepo) {
 			const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
 			if (activeEditorUri && activeEditorUri.scheme === 'file') {
-				const filePath = activeEditorUri.fsPath;
+				const filePathNorm = this.normalizePath(activeEditorUri.fsPath);
 				activeRepo = allRepos.find((r) => {
-					const rel = path.relative(r.rootPath, filePath);
+					const rel = path.relative(this.normalizePath(r.rootPath), filePathNorm);
 					return !rel.startsWith('..') && !path.isAbsolute(rel);
 				});
 			}
@@ -383,6 +519,19 @@ export class RepositoryDetector implements vscode.Disposable {
 			activeRepo,
 			allRepos
 		};
+	}
+
+	/**
+	 * Checks whether a .git file (worktree/submodule) or .git directory exists directly in dirPath.
+	 */
+	private async isGitDirectoryOrFile(dirPath: string): Promise<boolean> {
+		try {
+			const gitPath = path.join(dirPath, '.git');
+			const stat = await fs.stat(gitPath);
+			return stat.isDirectory() || stat.isFile();
+		} catch {
+			return false;
+		}
 	}
 
 	/**
@@ -404,14 +553,30 @@ export class RepositoryDetector implements vscode.Disposable {
 				}
 
 				const subPath = path.join(parentPath, entry.name);
-				if (detectedMap.has(subPath)) {
+				const subKey = this.normalizePath(subPath);
+				if (detectedMap.has(subKey)) {
 					continue;
 				}
 
-				const isRepo = await this.gitService.isGitRepository(subPath);
+				let isRepo = await this.gitService.isGitRepository(subPath);
+				if (!isRepo) {
+					isRepo = await this.isGitDirectoryOrFile(subPath);
+				}
+
 				if (isRepo) {
-					const info = await this.extractFromGitService(subPath);
-					detectedMap.set(info.rootPath, info);
+					let repoPath = subPath;
+					if (typeof this.gitService.getTopLevel === 'function') {
+						try {
+							const top = await this.gitService.getTopLevel(subPath);
+							if (top) {
+								repoPath = top;
+							}
+						} catch {
+							repoPath = subPath;
+						}
+					}
+					const info = await this.extractFromGitService(repoPath);
+					detectedMap.set(this.normalizePath(info.rootPath), info);
 				}
 			}
 		} catch {
@@ -427,7 +592,7 @@ export class RepositoryDetector implements vscode.Disposable {
 		let repoName = path.basename(rootPath);
 
 		// Remote URL
-		const remotes = repo.state.remotes || [];
+		const remotes = repo.state?.remotes || [];
 		const originRemote = remotes.find((r) => r.name === 'origin') || remotes[0];
 		const remoteUrl = originRemote?.fetchUrl || originRemote?.pushUrl;
 
@@ -439,8 +604,8 @@ export class RepositoryDetector implements vscode.Disposable {
 		}
 
 		// Branch and detached HEAD handling
-		let branch = 'unknown';
-		const head = repo.state.HEAD;
+		let branch = 'HEAD';
+		const head = repo.state?.HEAD;
 		if (head) {
 			if (head.name) {
 				branch = head.name;
@@ -451,9 +616,12 @@ export class RepositoryDetector implements vscode.Disposable {
 			}
 		}
 
-		const stagedCount = repo.state.indexChanges?.length ?? 0;
-		const uncommittedCount = repo.state.workingTreeChanges?.length ?? 0;
-		const isClean = stagedCount === 0 && uncommittedCount === 0 && (repo.state.mergeChanges?.length ?? 0) === 0;
+		const stagedCount = repo.state?.indexChanges?.length ?? 0;
+		const uncommittedCount = repo.state?.workingTreeChanges?.length ?? 0;
+		const isClean =
+			stagedCount === 0 &&
+			uncommittedCount === 0 &&
+			(repo.state?.mergeChanges?.length ?? 0) === 0;
 		const isEmpty = !head?.commit;
 
 		let statusSummary = 'Clean working tree';
@@ -514,27 +682,46 @@ export class RepositoryDetector implements vscode.Disposable {
 
 		let stagedCount = 0;
 		let uncommittedCount = 0;
+		let isClean = true;
 
-		try {
-			const stagedDiff = await this.gitService.getStagedDiff(rootPath);
-			stagedCount = stagedDiff.hasChanges ? 1 : 0;
-		} catch {
-			stagedCount = 0;
+		let statusCounted = false;
+		if (typeof this.gitService.getStatusCounts === 'function') {
+			try {
+				const counts = await this.gitService.getStatusCounts(rootPath);
+				stagedCount = counts.stagedCount;
+				uncommittedCount = counts.uncommittedCount;
+				isClean = counts.isClean;
+				statusCounted = true;
+			} catch {
+				statusCounted = false;
+			}
 		}
 
-		try {
-			const workingTreeDiff = await this.gitService.getWorkingTreeDiff(rootPath);
-			uncommittedCount = workingTreeDiff.hasChanges ? 1 : 0;
-		} catch {
-			uncommittedCount = 0;
+		if (!statusCounted) {
+			if (typeof this.gitService.getStagedDiff === 'function') {
+				try {
+					const stagedDiff = await this.gitService.getStagedDiff(rootPath);
+					stagedCount = stagedDiff.hasChanges ? 1 : 0;
+				} catch {
+					stagedCount = 0;
+				}
+			}
+			if (typeof this.gitService.getWorkingTreeDiff === 'function') {
+				try {
+					const workingTreeDiff = await this.gitService.getWorkingTreeDiff(rootPath);
+					uncommittedCount = workingTreeDiff.hasChanges ? 1 : 0;
+				} catch {
+					uncommittedCount = 0;
+				}
+			}
+			isClean = stagedCount === 0 && uncommittedCount === 0;
 		}
 
-		const isClean = stagedCount === 0 && uncommittedCount === 0;
 		const statusSummary = isClean
 			? 'Clean working tree'
-			: [stagedCount > 0 ? 'Staged changes' : '', uncommittedCount > 0 ? 'Uncommitted changes' : '']
+			: [stagedCount > 0 ? `${stagedCount} staged` : '', uncommittedCount > 0 ? `${uncommittedCount} uncommitted` : '']
 					.filter(Boolean)
-					.join(' • ');
+					.join(' • ') || 'Changes detected';
 
 		return {
 			id: rootPath,
@@ -548,19 +735,6 @@ export class RepositoryDetector implements vscode.Disposable {
 			isEmpty: branch === 'HEAD (detached)' && stagedCount === 0,
 			statusSummary
 		};
-	}
-
-	private async checkIfGitInstalled(): Promise<boolean> {
-		if (!this.gitService) {
-			return false;
-		}
-		try {
-			// Test by checking a dummy directory
-			await this.gitService.isGitRepository(process.cwd());
-			return true;
-		} catch {
-			return false;
-		}
 	}
 
 	/**
@@ -622,6 +796,11 @@ export class RepositoryDetector implements vscode.Disposable {
 
 	public dispose(): void {
 		this._isDisposed = true;
+		if (this._debounceTimer) {
+			clearTimeout(this._debounceTimer);
+			this._debounceTimer = undefined;
+		}
+
 		for (const disposables of this._repoDisposables.values()) {
 			for (const d of disposables) {
 				try {

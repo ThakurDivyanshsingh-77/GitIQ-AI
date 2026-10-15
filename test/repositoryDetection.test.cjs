@@ -440,3 +440,220 @@ test('SidebarWebviewProvider - 8. webviewReady handshake immediately posts detec
 	provider.dispose();
 	detector.dispose();
 });
+
+test('Repository Detection - 9. Git worktree where .git is a file is properly detected', async () => {
+	const worktreePath = path.resolve('c:/projects/my-worktree');
+	vscode.workspace.workspaceFolders = [{ uri: { fsPath: worktreePath } }];
+
+	// Git extension missing
+	vscode.extensions.getExtension = () => undefined;
+
+	const mockGitService = {
+		isGitRepository: async (p) => p === worktreePath,
+		getTopLevel: async () => worktreePath,
+		getCurrentBranch: async () => 'feature/worktree-branch',
+		getRemoteUrl: async () => 'https://github.com/org/worktree-project.git',
+		getStatusCounts: async () => ({ stagedCount: 2, uncommittedCount: 3, isClean: false })
+	};
+
+	const detector = new RepositoryDetector(mockGitService);
+	const state = await detector.detectRepositories();
+
+	assert.equal(state.status, 'detected');
+	assert.ok(state.activeRepo);
+	assert.equal(state.activeRepo.repoName, 'org/worktree-project');
+	assert.equal(state.activeRepo.branch, 'feature/worktree-branch');
+	assert.equal(state.activeRepo.rootPath, worktreePath);
+	assert.equal(state.activeRepo.stagedCount, 2);
+	assert.equal(state.activeRepo.uncommittedCount, 3);
+	assert.equal(state.activeRepo.statusSummary, '2 staged • 3 uncommitted');
+
+	detector.dispose();
+});
+
+test('Repository Detection - 10. Git unavailable when both Git extension and CLI are missing', async () => {
+	const rootPath = path.resolve('c:/projects/no-git-env');
+	vscode.workspace.workspaceFolders = [{ uri: { fsPath: rootPath } }];
+
+	// Both Git extension and CLI unavailable
+	vscode.extensions.getExtension = () => undefined;
+
+	const mockGitService = {
+		isGitRepository: async () => false,
+		isGitInstalled: async () => false
+	};
+
+	const detector = new RepositoryDetector(mockGitService);
+	const state = await detector.detectRepositories();
+
+	assert.equal(state.status, 'git-unavailable');
+	assert.equal(state.allRepos.length, 0);
+	assert.ok(state.errorMessage.includes('Git is not installed'));
+
+	detector.dispose();
+});
+
+test('SidebarWebviewProvider - 11. HTML contains root path element and action row, and payload includes rootPath', async () => {
+	const rootPath = path.resolve('c:/projects/html-check-repo');
+	vscode.workspace.workspaceFolders = [{ uri: { fsPath: rootPath } }];
+
+	const mockRepo = {
+		rootUri: { fsPath: rootPath },
+		state: {
+			HEAD: { name: 'main', commit: 'abcdef01' },
+			remotes: [{ name: 'origin', fetchUrl: 'https://github.com/owner/html-check-repo.git' }],
+			indexChanges: [],
+			workingTreeChanges: [],
+			mergeChanges: [],
+			onDidChange: () => ({ dispose: () => {} })
+		},
+		ui: { selected: true, onDidChange: () => ({ dispose: () => {} }) },
+		status: async () => {}
+	};
+
+	vscode.extensions.getExtension = () => ({
+		id: 'vscode.git',
+		isActive: true,
+		exports: {
+			getAPI: () => ({
+				state: 'initialized',
+				repositories: [mockRepo],
+				onDidOpenRepository: () => ({ dispose: () => {} }),
+				onDidCloseRepository: () => ({ dispose: () => {} }),
+				onDidChangeState: () => ({ dispose: () => {} }),
+				getRepository: () => mockRepo
+			})
+		}
+	});
+
+	const detector = new RepositoryDetector();
+	await detector.detectRepositories();
+
+	const postedMessages = [];
+	let webviewHtml = '';
+
+	const mockWebviewView = {
+		description: undefined,
+		webview: {
+			options: {},
+			set html(val) {
+				webviewHtml = val;
+			},
+			get html() {
+				return webviewHtml;
+			},
+			onDidReceiveMessage: (handler) => {
+				return { dispose: () => {} };
+			},
+			postMessage: async (msg) => {
+				postedMessages.push(msg);
+				return true;
+			}
+		}
+	};
+
+	const provider = new SidebarWebviewProvider(
+		{ fsPath: '/ext' },
+		undefined,
+		undefined,
+		undefined,
+		detector
+	);
+
+	provider.resolveWebviewView(mockWebviewView);
+
+	// Verify HTML contains required elements
+	assert.ok(webviewHtml.includes('id="repoRootPath"'), 'HTML must contain repoRootPath element');
+	assert.ok(webviewHtml.includes('id="repoActionRow"'), 'HTML must contain repoActionRow element');
+	assert.ok(webviewHtml.includes('id="statusDot"'), 'HTML must contain statusDot element');
+	assert.ok(webviewHtml.includes('id="statusText"'), 'HTML must contain statusText element');
+
+	// Verify pushRepoState payload
+	await provider.pushRepoState();
+	const repoStateMsgs = postedMessages.filter((m) => m.type === 'updateRepoState');
+	assert.ok(repoStateMsgs.length > 0);
+	const latest = repoStateMsgs[repoStateMsgs.length - 1].state;
+	assert.equal(latest.rootPath, rootPath);
+	assert.equal(latest.status, 'detected');
+
+	provider.dispose();
+	detector.dispose();
+});
+
+test('SidebarWebviewProvider - 12. openFolder and initGit webview messages invoke VS Code commands', async () => {
+	let messageHandler;
+	const mockWebviewView = {
+		description: undefined,
+		webview: {
+			options: {},
+			html: '',
+			onDidReceiveMessage: (handler) => {
+				messageHandler = handler;
+				return { dispose: () => {} };
+			},
+			postMessage: async () => true
+		}
+	};
+
+	const provider = new SidebarWebviewProvider({ fsPath: '/ext' });
+	provider.resolveWebviewView(mockWebviewView);
+
+	const executedCommands = [];
+	const originalExecute = vscode.commands.executeCommand;
+	vscode.commands.executeCommand = async (cmd, ...args) => {
+		executedCommands.push(cmd);
+	};
+
+	try {
+		await messageHandler({ command: 'openFolder' });
+		assert.ok(executedCommands.includes('vscode.openFolder'));
+
+		await messageHandler({ command: 'initGit' });
+		assert.ok(executedCommands.includes('git.init'));
+	} finally {
+		vscode.commands.executeCommand = originalExecute;
+		provider.dispose();
+	}
+});
+
+test('CheckGitRepositoryCommand - 13. Reports active detected repository branch and name', async () => {
+	const { registerCheckGitRepositoryCommand } = require('../out/commands/checkGitRepositoryCommand.js');
+
+	const registeredCommands = new Map();
+	const origRegister = vscode.commands.registerCommand;
+	vscode.commands.registerCommand = (id, handler) => {
+		registeredCommands.set(id, handler);
+		return { dispose: () => {} };
+	};
+
+	let infoMessage = '';
+	vscode.window.showInformationMessage = async (msg) => {
+		infoMessage = msg;
+		return undefined;
+	};
+
+	const mockDetector = {
+		getActiveRepository: () => ({
+			repoName: 'my-org/my-project',
+			branch: 'feature/detection-fix'
+		})
+	};
+
+	const mockContext = { subscriptions: [] };
+	const mockGitService = { isGitRepository: async () => true };
+
+	try {
+		registerCheckGitRepositoryCommand(mockContext, mockGitService, mockDetector);
+		const handler = registeredCommands.get('gitIQ.checkGitRepository');
+		assert.ok(handler);
+
+		vscode.workspace.workspaceFolders = [{ uri: { fsPath: 'c:/projects/my-project' } }];
+		await handler();
+
+		assert.ok(infoMessage.includes('my-org/my-project'));
+		assert.ok(infoMessage.includes('feature/detection-fix'));
+	} finally {
+		vscode.commands.registerCommand = origRegister;
+	}
+});
+

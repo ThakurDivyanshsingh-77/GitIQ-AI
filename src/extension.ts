@@ -127,9 +127,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
 		console.log('[GitIQ] Registering extension commands...');
 
+		// Git repository discovery and lifecycle management
+		const repositoryDetector = new RepositoryDetector(gitService, loggerService);
+		context.subscriptions.push(repositoryDetector);
+
 		// Core Git & AI commands
 		registerHelloCommand(context);
-		registerCheckGitRepositoryCommand(context, gitService);
+		registerCheckGitRepositoryCommand(context, gitService, repositoryDetector);
 		registerPreviewGitDiffCommand(context, gitService, gitDiffPreviewProvider);
 		registerGenerateCommitMessageCommand(context, commitMessageService, loggerService);
 
@@ -172,10 +176,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
 		// Native VS Code Language Model Tools for GitHub Copilot Chat
 		registerLanguageModelTools(context);
-
-		// Git repository discovery and lifecycle management
-		const repositoryDetector = new RepositoryDetector(gitService, loggerService);
-		context.subscriptions.push(repositoryDetector);
 
 		// GitIQ Activity Bar Modern Sidebar Webview View
 		const sidebarWebviewProvider = new SidebarWebviewProvider(

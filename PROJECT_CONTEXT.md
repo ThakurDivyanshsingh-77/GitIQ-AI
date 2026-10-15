@@ -290,19 +290,31 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
     - Empty state when no changes exist, and error state with Retry action.
   - **Virtual Markdown Report**: In-memory read-only report provider (`gitiq-code-review`) and command `gitIQ.showCodeReviewReport`.
   - **Automated Test Suite**: Added 10 unit tests in `test/codeReviewService.test.cjs` expanding the automated test suite to 55 tests (100% passing).
-- [x] **Repository Detection Stuck on Loading & Multi-Root Support (Root-Cause Fix)**:
-  - **Root Cause**:
-    1. Webview message loss race condition: `SidebarWebviewProvider.resolveWebviewView` set the HTML with hardcoded `Loading...` / `Detecting repository...` text and called `updateState()` before the webview's internal browser finished parsing the DOM and registering its `window.addEventListener('message')` listener. Messages posted during page load were discarded, and because the client script never requested state, the card remained stuck indefinitely.
-    2. Zero integration with the built-in VS Code Git extension (`vscode.git`): GitIQ solely relied on CLI subprocesses at `workspaceFolders[0]`. If Git was slow to activate, if repositories opened in subfolders (e.g. monorepos), or if multi-root workspaces were used, detection failed.
-    3. Missing dynamic Git change synchronization: GitIQ did not listen to branch checkout, commit, or staging events from VS Code's Source Control system.
-    4. Lack of resilient lifecycle states: No timeout guarantee or explicit handling for `detecting`, `detected`, `no-repo`, `git-unavailable`, or `detection-failed`.
-  - **Fixes Applied**:
-    1. **Webview Handshake (`webviewReady`)**: Added an immediate bidirectional handshake where the webview DOM posts `{ command: 'webviewReady' }` as soon as its script listener is mounted, prompting `SidebarWebviewProvider` to immediately deliver the latest repository state.
-    2. **`RepositoryDetector` Service (`src/services/repositoryDetector.ts`)**: Encapsulates official VS Code Git extension API access (`vscode.extensions.getExtension('vscode.git')`), automatic extension activation, access to `git.getAPI(1)`, and dynamic discovery across `git.repositories`.
-    3. **Multi-Root & Subfolder Repository Discovery**: Scans workspace folders and immediate subfolders, supports nested repositories, and provides an in-card QuickPick switcher `[Switch (N)]` and `gitIQ.selectRepository` command when multiple repositories exist. Automatically selects repository matching the active editor's file.
-    4. **Dynamic Event Listeners**: Listens to `gitApi.onDidOpenRepository`, `gitApi.onDidCloseRepository`, `gitApi.onDidChangeState`, and each repository's `repo.state.onDidChange` (updating branch, staged count, and uncommitted count immediately upon Git operations).
-    5. **Concrete Lifecycle States**: Enforces explicit states (`detecting`, `detected`, `no-repo`, `git-unavailable`, `detection-failed`) with a 10-second timeout guarantee, request sequence tokens preventing stale overwrites, and clean disposal of all listeners.
-    6. **Automated Test Suite**: Added 8 unit tests in `test/repositoryDetection.test.cjs` covering official Git API detection, no-repo workspace, CLI fallback, delayed activation, multi-repo QuickPick selection, detached HEAD/empty repo handling, dynamic state change events, and `webviewReady` handshake. Test suite expanded to 63 tests (100% passing).
+- [x] **Production-Ready Repository Detection & Dashboard UI (Root-Cause Fix)**:
+  - **Root Causes Identified**:
+    1. **Asynchronous Race Condition & Cancellation Loop**: `extension.ts` initiated detection immediately at startup, setting state to `detecting`. When the webview loaded, its `webviewReady` message checked `state.status === 'detecting'` and re-triggered `detectRepositories()`, bumping `_detectionSeq`. Previous in-flight detections were discarded as stale upon completion (`currentSeq !== this._detectionSeq`), leaving the status permanently trapped in `detecting`.
+    2. **VS Code Git Extension Initialization Gap & Missing `openRepository`**: When `vscode.git` activates, `api.state` can initially be `'uninitialized'`. The detector did not wait for `'initialized'` state, resulting in `api.repositories` being empty and `getRepository(uri)` returning null. Furthermore, the detector never called the official `gitApi.openRepository(folder.uri)` API, failing to open repositories discovered asynchronously.
+    3. **Webview Listener Mounting Order**: In the dashboard HTML, `vscode.postMessage({ command: 'webviewReady' })` was executed *before* `window.addEventListener('message')` was mounted, causing race conditions where immediate state replies from the host were lost.
+    4. **Worktrees & Submodules (`.git` as a file)**: Subfolder and CLI detection checks assumed `.git` is always a directory, missing Git worktrees and submodules where `.git` is a text file containing `gitdir: ...`.
+    5. **Missing Actionable UI States & Client-Side Watchdog**: The dashboard lacked interactive fallback buttons for "No repository" (Initialize Git Repository / Open Folder), "Git unavailable" (Retry / Download Git), and "Detection error" (Retry), as well as root path display and a watchdog timer to prevent indefinite loading states.
+  - **Production-Ready Fixes Applied**:
+    1. **Single-Flight & Debounced Concurrency Model**: Replaced fragile sequence tokens with a single-flight promise model (`_inFlightDetectionPromise` + `_rerunAfterInFlight`) and debounced event scheduler (`scheduleDetection(delayMs)`). Concurrent callers share the in-flight run safely, and new repository events automatically queue a clean follow-up cycle without dropping results.
+    2. **Official VS Code Git API Synchronization**:
+       - Added `openRepository(uri: vscode.Uri): Promise<Repository | null>` to `src/types/vscodeGit.ts`.
+       - In `initGitExtension()`, if `api.state === 'uninitialized'`, waits up to 2 seconds for the `'initialized'` event.
+       - Calls `gitApi.openRepository(folder.uri)` if `gitApi.getRepository(folder.uri)` is initially null.
+    3. **Worktree & Submodule Support**: Added `isGitDirectoryOrFile()` checking both directory and file `.git` entries, and integrated `gitService.getTopLevel()` (`git rev-parse --show-toplevel`) to resolve true working-tree roots.
+    4. **Fast Metadata & Git Availability Checks**:
+       - Added `gitService.isGitInstalled()` (`git --version`) for accurate CLI availability testing.
+       - Added `gitService.getStatusCounts()` (`git status --porcelain`) for instantaneous staged and uncommitted file counting without running heavy multi-megabyte diffs.
+    5. **Dashboard UI States & Action Row**:
+       - **Detecting**: Temporary loading spinner with client-side 7s watchdog timer preventing indefinite hangs.
+       - **Repository Detected**: Displays repo name, current branch, root path with tooltip (`#repoRootPath`), and Git status summary.
+       - **No Repository**: Displays warning dot and contextual action buttons: "Initialize Repository" (`git.init`) and "Open Folder" (`vscode.openFolder`).
+       - **Git Unavailable**: Displays warning dot, actionable explanation, and "↻ Retry Detection" button.
+       - **Detection Error**: Displays error dot, failure message, and "↻ Retry Detection" button.
+       - Fixed webview script order: mounted `window.addEventListener('message')` *before* sending `webviewReady`.
+    6. **Automated Test Suite**: Added 5 new tests in `test/repositoryDetection.test.cjs` covering worktree `.git` file detection, Git unavailable handling, root path in webview payload, and command execution for `initGit` / `openFolder`. Total tests expanded from 63 to 68 tests (100% passing).
 
 ---
 
@@ -310,11 +322,11 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
 
 ### Pending Tasks / Roadmap
 - [x] **AI Code Review**: Automated multi-file review for staged/working-tree/branch changes.
-- [x] **Reliable Repository Detection**: Official VS Code Git API integration with multi-root, nested repo, and lifecycle fix.
+- [x] **Reliable Repository Detection**: Official VS Code Git API integration with multi-root, worktree, and lifecycle fix.
 - [ ] **Custom Prompt Templates**: Configurable commit styles and PR templates.
 - [ ] **Source Control UI Integration**: Inline action button in VS Code SCM title bar.
 - [x] **Multi-Provider Support**: Implemented Copilot, Gemini, Ollama, and MCP.
-- [x] **Automated Test Suite**: Implemented 63 tests across 8 test suites in `test/`.
+- [x] **Automated Test Suite**: Implemented 68 tests across 8 test suites in `test/` (100% passing).
 
 ### Known Issues
 - *None.*

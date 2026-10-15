@@ -20,6 +20,7 @@ export interface WebviewRepoState {
 	hasWorkspace: boolean;
 	isGitRepo: boolean;
 	repoName: string;
+	rootPath?: string;
 	branch: string;
 	remoteUrl?: string;
 	stagedCount?: number;
@@ -92,6 +93,27 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 					await this.repositoryDetector.refresh();
 				} else {
 					await this.updateState();
+				}
+				return;
+			}
+
+			if (data.command === 'openFolder') {
+				await vscode.commands.executeCommand('vscode.openFolder');
+				return;
+			}
+
+			if (data.command === 'initGit') {
+				try {
+					await vscode.commands.executeCommand('git.init');
+					if (this.repositoryDetector) {
+						setTimeout(() => {
+							void this.repositoryDetector?.refresh();
+						}, 800);
+					}
+				} catch (err: unknown) {
+					const msg = err instanceof Error ? err.message : String(err);
+					this.logger?.warn(`git.init command failed: ${msg}`);
+					void vscode.window.showErrorMessage(`GitIQ: Failed to initialize Git repository: ${msg}`);
 				}
 				return;
 			}
@@ -232,6 +254,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			hasWorkspace: (vscode.workspace.workspaceFolders?.length ?? 0) > 0,
 			isGitRepo: current.status === 'detected' && !!activeRepo,
 			repoName,
+			rootPath: activeRepo?.rootPath,
 			branch: activeRepo?.branch ?? (current.status === 'detecting' ? 'Detecting...' : 'None'),
 			remoteUrl: activeRepo?.remoteUrl,
 			stagedCount: activeRepo?.stagedCount,
@@ -428,6 +451,56 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			margin-top: 6px;
 			font-size: 11.5px;
 			color: var(--text-muted);
+		}
+
+		.repo-root-path {
+			font-size: 10.5px;
+			color: var(--text-muted);
+			font-family: var(--vscode-editor-font-family, monospace);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			margin-top: 3px;
+			opacity: 0.85;
+		}
+
+		.repo-action-row {
+			margin-top: 10px;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			padding-top: 8px;
+			border-top: 1px solid var(--border-color);
+		}
+
+		.repo-action-btn {
+			background: rgba(255, 255, 255, 0.08);
+			border: 1px solid var(--border-color);
+			color: #ffffff;
+			border-radius: 5px;
+			padding: 4px 9px;
+			font-size: 11px;
+			font-weight: 500;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			gap: 5px;
+			transition: background-color 0.15s ease, border-color 0.15s ease;
+		}
+
+		.repo-action-btn:hover {
+			background: rgba(255, 255, 255, 0.15);
+			border-color: var(--accent-blue);
+		}
+
+		.repo-action-btn.primary {
+			background: var(--accent-blue);
+			border-color: var(--accent-blue);
+			color: #ffffff;
+		}
+
+		.repo-action-btn.primary:hover {
+			background: #4094ff;
 		}
 
 		.status-dot {
@@ -987,10 +1060,12 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			</svg>
 			<span id="repoName">Detecting...</span>
 		</div>
+		<div class="repo-root-path" id="repoRootPath" style="display: none;"></div>
 		<div class="repo-status-row">
 			<div class="status-dot loading" id="statusDot"></div>
 			<span id="statusText">Detecting repository...</span>
 		</div>
+		<div class="repo-action-row" id="repoActionRow" style="display: none;"></div>
 	</div>
 
 	<!-- Quick Actions Grid -->
@@ -1264,8 +1339,65 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 	<script>
 		const vscode = acquireVsCodeApi();
 
-		// Handshake: Notify extension host immediately that listener and DOM are ready
-		vscode.postMessage({ command: 'webviewReady' });
+		var detectingWatchdog = null;
+
+		function clearWatchdog() {
+			if (detectingWatchdog) {
+				clearTimeout(detectingWatchdog);
+				detectingWatchdog = null;
+			}
+		}
+
+		function startWatchdog() {
+			clearWatchdog();
+			detectingWatchdog = setTimeout(function() {
+				var statusDotEl = document.getElementById('statusDot');
+				var statusTextEl = document.getElementById('statusText');
+				var actionRow = document.getElementById('repoActionRow');
+				if (statusTextEl && statusTextEl.textContent === 'Detecting repository...') {
+					statusDotEl.className = 'status-dot warning';
+					statusTextEl.textContent = 'Detection is taking longer than expected';
+					if (actionRow) {
+						actionRow.style.display = 'flex';
+						actionRow.innerHTML =
+							'<button class="repo-action-btn primary" onclick="retryDetection()">' +
+								'↻ Retry Detection' +
+							'</button>' +
+							'<button class="repo-action-btn" onclick="openFolder()">' +
+								'Open Folder' +
+							'</button>';
+					}
+				}
+			}, 7000);
+		}
+
+		function retryDetection() {
+			var statusDotEl = document.getElementById('statusDot');
+			var statusTextEl = document.getElementById('statusText');
+			var actionRow = document.getElementById('repoActionRow');
+			var repoRootPathEl = document.getElementById('repoRootPath');
+			if (statusDotEl) statusDotEl.className = 'status-dot loading';
+			if (statusTextEl) statusTextEl.textContent = 'Detecting repository...';
+			if (actionRow) {
+				actionRow.style.display = 'none';
+				actionRow.innerHTML = '';
+			}
+			if (repoRootPathEl) repoRootPathEl.style.display = 'none';
+			startWatchdog();
+			vscode.postMessage({ command: 'refresh' });
+		}
+
+		function openFolder() {
+			vscode.postMessage({ command: 'openFolder' });
+		}
+
+		function initGit() {
+			var statusDotEl = document.getElementById('statusDot');
+			var statusTextEl = document.getElementById('statusText');
+			if (statusDotEl) statusDotEl.className = 'status-dot loading';
+			if (statusTextEl) statusTextEl.textContent = 'Initializing Git repository...';
+			vscode.postMessage({ command: 'initGit' });
+		}
 
 		// Attach action card clicks
 		document.querySelectorAll('.action-card, .sub-item-btn').forEach(btn => {
@@ -1281,11 +1413,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 		// Refresh button
 		document.getElementById('refreshBtn').addEventListener('click', (e) => {
 			e.stopPropagation();
-			const statusDotEl = document.getElementById('statusDot');
-			const statusTextEl = document.getElementById('statusText');
-			statusDotEl.className = 'status-dot loading';
-			statusTextEl.textContent = 'Detecting repository...';
-			vscode.postMessage({ command: 'refresh' });
+			retryDetection();
 		});
 
 		// Switch Repo button
@@ -1305,7 +1433,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			}
 		}
 
-		// Handle updates from extension host
+		// Handle updates from extension host - registered FIRST before webviewReady handshake
 		window.addEventListener('message', (event) => {
 			const msg = event.data;
 			if (msg && msg.type === 'updateRepoState' && msg.state) {
@@ -1313,6 +1441,8 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				const repoNameEl = document.getElementById('repoName');
 				const statusDotEl = document.getElementById('statusDot');
 				const statusTextEl = document.getElementById('statusText');
+				const repoRootPathEl = document.getElementById('repoRootPath');
+				const repoActionRowEl = document.getElementById('repoActionRow');
 				const switchBtn = document.getElementById('switchRepoBtn');
 				const repoCountText = document.getElementById('repoCountText');
 
@@ -1326,39 +1456,117 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				}
 
 				if (state.status === 'detecting') {
+					startWatchdog();
 					repoNameEl.textContent = state.repoName || 'Detecting...';
 					statusDotEl.className = 'status-dot loading';
 					statusTextEl.textContent = 'Detecting repository...';
+					if (repoRootPathEl) repoRootPathEl.style.display = 'none';
+					if (repoActionRowEl) {
+						repoActionRowEl.style.display = 'none';
+						repoActionRowEl.innerHTML = '';
+					}
 				} else if (state.status === 'detected') {
+					clearWatchdog();
 					repoNameEl.textContent = state.repoName;
 					statusDotEl.className = 'status-dot';
 					var branchText = state.branch || 'HEAD';
 					var summary = state.statusSummary ? ' • ' + state.statusSummary : '';
 					statusTextEl.textContent = branchText + summary;
+					if (repoRootPathEl && state.rootPath) {
+						repoRootPathEl.style.display = 'block';
+						repoRootPathEl.textContent = state.rootPath;
+						repoRootPathEl.title = state.rootPath;
+					} else if (repoRootPathEl) {
+						repoRootPathEl.style.display = 'none';
+					}
+					if (repoActionRowEl) {
+						repoActionRowEl.style.display = 'none';
+						repoActionRowEl.innerHTML = '';
+					}
 				} else if (state.status === 'no-repo') {
-					repoNameEl.textContent = state.hasWorkspace ? 'No Git Repository' : 'No Workspace';
+					clearWatchdog();
+					repoNameEl.textContent = state.hasWorkspace ? 'No Git Repository' : 'No Workspace Open';
 					statusDotEl.className = 'status-dot warning';
-					statusTextEl.textContent = state.hasWorkspace ? 'No Git repository found' : 'Open a folder to start';
+					statusTextEl.textContent = state.hasWorkspace
+						? 'No Git repository found in workspace'
+						: 'Open a folder to start working with Git';
+					if (repoRootPathEl) repoRootPathEl.style.display = 'none';
+					if (repoActionRowEl) {
+						repoActionRowEl.style.display = 'flex';
+						if (state.hasWorkspace) {
+							repoActionRowEl.innerHTML =
+								'<button class="repo-action-btn primary" onclick="initGit()">' +
+									'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Initialize Repository' +
+								'</button>' +
+								'<button class="repo-action-btn" onclick="openFolder()">' +
+									'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Open Folder' +
+								'</button>';
+						} else {
+							repoActionRowEl.innerHTML =
+								'<button class="repo-action-btn primary" onclick="openFolder()">' +
+									'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Open Folder' +
+								'</button>';
+						}
+					}
 				} else if (state.status === 'git-unavailable') {
+					clearWatchdog();
 					repoNameEl.textContent = 'Git Unavailable';
 					statusDotEl.className = 'status-dot warning';
-					statusTextEl.textContent = state.errorMessage || 'Git extension unavailable';
+					statusTextEl.textContent = state.errorMessage || 'Git CLI or VS Code Git extension is unavailable.';
+					if (repoRootPathEl) repoRootPathEl.style.display = 'none';
+					if (repoActionRowEl) {
+						repoActionRowEl.style.display = 'flex';
+						repoActionRowEl.innerHTML =
+							'<button class="repo-action-btn primary" onclick="retryDetection()">' +
+								'↻ Retry Detection' +
+							'</button>';
+					}
 				} else if (state.status === 'detection-failed') {
-					repoNameEl.textContent = 'Detection Failed';
+					clearWatchdog();
+					repoNameEl.textContent = 'Detection Error';
 					statusDotEl.className = 'status-dot error';
-					statusTextEl.textContent = state.errorMessage || 'Repository detection failed';
+					statusTextEl.textContent = state.errorMessage || 'Repository detection failed.';
+					if (repoRootPathEl) repoRootPathEl.style.display = 'none';
+					if (repoActionRowEl) {
+						repoActionRowEl.style.display = 'flex';
+						repoActionRowEl.innerHTML =
+							'<button class="repo-action-btn primary" onclick="retryDetection()">' +
+								'↻ Retry Detection' +
+							'</button>';
+					}
 				} else if (state.isGitRepo) {
+					clearWatchdog();
 					repoNameEl.textContent = state.repoName;
 					statusDotEl.className = 'status-dot';
 					statusTextEl.textContent = 'Repository detected (' + state.branch + ')';
+					if (repoRootPathEl && state.rootPath) {
+						repoRootPathEl.style.display = 'block';
+						repoRootPathEl.textContent = state.rootPath;
+					}
+					if (repoActionRowEl) repoActionRowEl.style.display = 'none';
 				} else if (state.hasWorkspace) {
+					clearWatchdog();
 					repoNameEl.textContent = state.repoName;
 					statusDotEl.className = 'status-dot warning';
 					statusTextEl.textContent = 'Not a Git repository';
+					if (repoRootPathEl) repoRootPathEl.style.display = 'none';
+					if (repoActionRowEl) {
+						repoActionRowEl.style.display = 'flex';
+						repoActionRowEl.innerHTML =
+							'<button class="repo-action-btn primary" onclick="initGit()">Initialize Repository</button>' +
+							'<button class="repo-action-btn" onclick="openFolder()">Open Folder</button>';
+					}
 				} else {
+					clearWatchdog();
 					repoNameEl.textContent = 'No Workspace';
 					statusDotEl.className = 'status-dot warning';
 					statusTextEl.textContent = 'Open a folder to start';
+					if (repoRootPathEl) repoRootPathEl.style.display = 'none';
+					if (repoActionRowEl) {
+						repoActionRowEl.style.display = 'flex';
+						repoActionRowEl.innerHTML =
+							'<button class="repo-action-btn primary" onclick="openFolder()">Open Folder</button>';
+					}
 				}
 
 				if (state.activeProvider) {
@@ -1371,6 +1579,10 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				renderCodeReviewState(msg.state);
 			}
 		});
+
+		// Handshake: Notify extension host AFTER listener is registered
+		startWatchdog();
+		vscode.postMessage({ command: 'webviewReady' });
 
 		function renderCodeReviewState(state) {
 			var panel = document.getElementById('codeReviewPanel');

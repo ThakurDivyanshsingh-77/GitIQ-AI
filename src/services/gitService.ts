@@ -88,6 +88,71 @@ export class GitService {
 	}
 
 	/**
+	 * Checks whether Git CLI is installed and accessible in the system PATH.
+	 */
+	public async isGitInstalled(): Promise<boolean> {
+		try {
+			const { stdout } = await execFileAsync('git', ['--version'], { windowsHide: true });
+			return stdout.toLowerCase().includes('git version');
+		} catch {
+			return false;
+		}
+	}
+
+	/**
+	 * Returns the top-level root directory of the Git working tree (`git rev-parse --show-toplevel`).
+	 * Handles both regular repositories and repositories where .git is a file (worktrees, submodules).
+	 */
+	public async getTopLevel(workspacePath: string): Promise<string> {
+		try {
+			const { stdout } = await execFileAsync('git', ['rev-parse', '--show-toplevel'], {
+				cwd: workspacePath,
+				windowsHide: true
+			});
+			return stdout.trim() || workspacePath;
+		} catch {
+			return workspacePath;
+		}
+	}
+
+	/**
+	 * Efficiently retrieves change counts using `git status --porcelain` without reading full diffs.
+	 */
+	public async getStatusCounts(
+		workspacePath: string
+	): Promise<{ stagedCount: number; uncommittedCount: number; isClean: boolean }> {
+		try {
+			const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+				cwd: workspacePath,
+				windowsHide: true
+			});
+			const lines = stdout.split(/\r?\n/).filter((line) => line.trim().length > 0);
+			let stagedCount = 0;
+			let uncommittedCount = 0;
+
+			for (const line of lines) {
+				const indexStatus = line[0];
+				const workTreeStatus = line[1];
+
+				if (indexStatus && indexStatus !== ' ' && indexStatus !== '?') {
+					stagedCount++;
+				}
+				if (workTreeStatus && workTreeStatus !== ' ') {
+					uncommittedCount++;
+				}
+			}
+
+			return {
+				stagedCount,
+				uncommittedCount,
+				isClean: lines.length === 0
+			};
+		} catch {
+			return { stagedCount: 0, uncommittedCount: 0, isClean: true };
+		}
+	}
+
+	/**
 	 * Reads the staged changes for a repository, excluding generated files and lock files.
 	 * Reads the diff once to maximize performance.
 	 */

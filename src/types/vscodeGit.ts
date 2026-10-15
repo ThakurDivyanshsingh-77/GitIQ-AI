@@ -19,6 +19,7 @@ export interface GitAPI {
 	readonly onDidOpenRepository: vscode.Event<Repository>;
 	readonly onDidCloseRepository: vscode.Event<Repository>;
 	getRepository(uri: vscode.Uri): Repository | null;
+	openRepository(uri: vscode.Uri): Promise<Repository | null>;
 }
 
 export interface Repository {
