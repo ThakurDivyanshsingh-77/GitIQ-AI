@@ -36,17 +36,38 @@ export function registerCommitStatisticsCommand(
 				const stats = await historyService.getCommitStatistics(workspacePath);
 
 				const markdown = [
-					'# Repository Statistics',
+					'# 📊 GitIQ — Repository Statistics',
 					'',
-					`- **Total Commits:** ${stats.totalCommits}`,
-					`- **Today's Commits:** ${stats.commitsToday}`,
-					`- **Last 7 Days:** ${stats.commitsLast7Days}`,
-					`- **Last 30 Days:** ${stats.commitsLast30Days}`,
-					`- **Average Commits/Day:** ${stats.averageCommitsPerDay}`,
-					`- **First Commit:** ${stats.firstCommit}`,
-					`- **Latest Commit:** ${stats.latestCommit}`,
-					`- **Branch Name:** ${stats.branchName}`,
-					`- **Repository Age:** ${stats.repositoryAgeDays} days`
+					'> [!NOTE]',
+					`> **Active Branch:** \`${stats.branchName}\` • **Project Lifetime:** \`${stats.repositoryAgeDays} days\` • **Total Commits:** **${stats.totalCommits}**`,
+					'',
+					'---',
+					'',
+					'### 🚀 Velocity & Commit Throughput',
+					'',
+					'| Metric | Value | Description |',
+					'| :--- | :---: | :--- |',
+					`| 📦 **Total Lifetime Commits** | **${stats.totalCommits}** | Total commits on active branch |`,
+					`| ⚡ **Commits Today** | **${stats.commitsToday}** | Recorded in the last 24 hours |`,
+					`| 📅 **Last 7 Days** | **${stats.commitsLast7Days}** | Weekly commit activity |`,
+					`| 🗓️ **Last 30 Days** | **${stats.commitsLast30Days}** | Monthly commit pace |`,
+					`| 📈 **Average Velocity** | **${stats.averageCommitsPerDay} commits/day** | Mean daily contribution throughput |`,
+					'',
+					'---',
+					'',
+					'### 🕒 Project Timeline Milestones',
+					'',
+					'| Milestone | Details |',
+					'| :--- | :--- |',
+					`| 🌿 **Working Branch** | \`${stats.branchName}\` |`,
+					`| 🚀 **First Inception Commit** | \`${stats.firstCommit}\` |`,
+					`| 🎯 **Latest HEAD Commit** | \`${stats.latestCommit}\` |`,
+					`| ⏳ **Total Project Age** | **${stats.repositoryAgeDays} days** |`,
+					'',
+					'---',
+					'',
+					'> [!TIP]',
+					'> Want team insights? Run **GitIQ: Top Contributors** or **GitIQ: Commit Activity (Last 7 Days)**.'
 				].join('\n');
 
 				await historyPreviewProvider.showPreview('commit-statistics', markdown);

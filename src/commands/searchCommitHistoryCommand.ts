@@ -58,28 +58,54 @@ export function registerSearchCommitHistoryCommand(
 				}
 
 				const markdownBlocks: string[] = [
-					'# Search Results',
+					'# 🔍 GitIQ — Commit Search Results',
 					'',
-					'Keyword:',
-					trimmedKeyword,
-					''
+					'> [!NOTE]',
+					`> **Search Query:** \`${trimmedKeyword}\` • **Matching Commits:** **${results.length}**`,
+					'',
+					'---',
+					'',
+					'### 📋 Results Overview',
+					'',
+					'| Commit | Date | Author | Subject Line |',
+					'| :---: | :---: | :--- | :--- |'
 				];
 
 				for (const commit of results) {
 					markdownBlocks.push(
-						'-----------------------------------',
+						`| \`${commit.shortHash}\` | \`${commit.date}\` | **${commit.author}** | ${commit.subject} |`
+					);
+				}
+
+				markdownBlocks.push(
+					'',
+					'---',
+					'',
+					'### 📜 Detailed Commit Logs',
+					''
+				);
+
+				for (const commit of results) {
+					markdownBlocks.push(
+						`#### 🔹 \`${commit.shortHash}\` — ${commit.subject}`,
 						'',
-						commit.shortHash,
-						`Author: ${commit.author}`,
-						'Date:',
-						commit.date,
+						'| Metadata | Details |',
+						'| :--- | :--- |',
+						`| 👤 **Author** | ${commit.author} |`,
+						`| 📅 **Commit Date** | \`${commit.date}\` |`,
+						`| 🔗 **Hash** | \`${commit.shortHash}\` |`,
 						'',
-						commit.subject,
+						`> ${commit.subject}`,
+						'',
+						'---',
 						''
 					);
 				}
 
-				markdownBlocks.push('-----------------------------------');
+				markdownBlocks.push(
+					'> [!TIP]',
+					'> To inspect or explain any of these commits, click **GitIQ: Explain Commit** in the sidebar.'
+				);
 
 				await historyPreviewProvider.showPreview('search-results', markdownBlocks.join('\n'));
 				logger?.info('Commit search results displayed successfully.');

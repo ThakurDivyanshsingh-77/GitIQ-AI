@@ -31,14 +31,21 @@ export class CommitExplainProvider implements vscode.TextDocumentContentProvider
 		});
 
 		const markdownContent = [
-			`# 🤖 GitIQ AI Commit Explanation`,
+			`# 🤖 GitIQ — AI Commit Explanation`,
 			``,
-			`**Commit:** \`${shortHash}\``,
-			`**Subject:** ${subject}`,
+			`> [!NOTE]`,
+			`> **Commit:** \`${shortHash}\` • **Subject:** ${subject}`,
 			``,
 			`---`,
 			``,
-			explanation
+			`### 💡 Commit Breakdown & Analysis`,
+			``,
+			explanation,
+			``,
+			`---`,
+			``,
+			`> [!TIP]`,
+			`> Want a broader analysis of your changes? Run **GitIQ: AI Code Review** on this branch.`
 		].join('\n');
 
 		this.explanationMap.set(uri.toString(), markdownContent);

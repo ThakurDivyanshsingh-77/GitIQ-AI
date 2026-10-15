@@ -338,6 +338,16 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
        - **Verified Webview Script**: Validated client script in mock DOM and verified 100% test pass rate across all 68 suites.
        - **Packaged Production Binary**: Packaged `gitiq-1.1.2.vsix`.
 
+     13. **Version 1.1.3 - Complete Redesign & Elevation of All Markdown Reports & Previews**:
+        - **Shared Markdown Engine**: Created `src/utils/markdownUtils.ts` with reusable helpers: `renderProgressBar()` (ASCII/Unicode bar chart `████████░░░░`), `formatPercentage()`, `getRankBadge()` (🥇, 🥈, 🥉), and `formatAlert()` (GitHub callout blocks).
+        - **AI Code Review Report**: Transformed `src/services/codeReviewService.ts` to output an executive report featuring a `Severity & Risk Matrix` table, scope breakdown, GitHub alerts (`> [!NOTE]`, `> [!WARNING]`, `> [!TIP]`), and structured finding cards with metadata tables and syntax-highlighted diff patches.
+        - **Commit Statistics**: Redesigned `src/commands/commitStatisticsCommand.ts` with categorized `Velocity & Commit Throughput` and `Project Timeline Milestones` key-value tables.
+        - **Top Contributors Leaderboard**: Redesigned `src/commands/topContributorsCommand.ts` and `src/services/historyService.ts` with ranked leaderboard tables, medals, exact percentage shares, and Unicode distribution meters.
+        - **Commit Activity (Last 7 Days)**: Redesigned `src/commands/commitActivityCommand.ts` and `src/services/historyService.ts` with weekly throughput totals, peak day detection, daily contribution averages, and daily velocity bars.
+        - **Search Commit History**: Redesigned `src/commands/searchCommitHistoryCommand.ts` replacing dashed dividers with a fast-scannable overview table followed by clean detailed commit cards.
+        - **Repository Information & AI Commit Explanation**: Redesigned `src/providers/repoInfoProvider.ts` and `src/providers/commitExplainProvider.ts` with structured metadata tables, alert callouts, and clean section dividers.
+        - **Test Verification**: All 68 tests passing cleanly with 100% backward and forward compatibility.
+
 ---
 
 ## 7. Pending Tasks & Known Issues

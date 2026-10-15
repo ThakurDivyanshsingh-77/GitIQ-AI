@@ -3,6 +3,7 @@ import type { HistoryPreviewProvider } from '../providers/historyPreviewProvider
 import type { HistoryService } from '../services/historyService';
 import type { LoggerService } from '../services/loggerService';
 import { COMMAND_IDS } from '../utils/constants';
+import { formatPercentage, getRankBadge, renderProgressBar } from '../utils/markdownUtils';
 
 /**
  * Registers the Top Contributors command handler.
@@ -40,18 +41,38 @@ export function registerTopContributorsCommand(
 					return;
 				}
 
+				const totalCommits = contributors.reduce((sum, c) => sum + c.commitCount, 0) || 1;
+				const maxCommits = contributors[0]?.commitCount || 1;
+
 				const markdownLines: string[] = [
-					'# Top Contributors',
-					''
+					'# 🏆 GitIQ — Top Contributors Leaderboard',
+					'',
+					'> [!NOTE]',
+					`> **Total Contributors:** \`${contributors.length}\` • **Total Tracked Commits:** **${totalCommits}**`,
+					'',
+					'---',
+					'',
+					'| Rank | Contributor | Commits | Contribution Share | Visual Distribution |',
+					'| :---: | :--- | :---: | :---: | :--- |'
 				];
 
-				for (const c of contributors) {
+				for (let i = 0; i < contributors.length; i++) {
+					const c = contributors[i];
+					const rankBadge = getRankBadge(i);
+					const share = formatPercentage(c.commitCount, totalCommits);
+					const bar = renderProgressBar(c.commitCount, maxCommits, 12);
 					markdownLines.push(
-						c.name,
-						`${c.commitCount} commits`,
-						''
+						`| ${rankBadge} | **${c.name}** | **${c.commitCount}** | ${share} | \`${bar}\` |`
 					);
 				}
+
+				markdownLines.push(
+					'',
+					'---',
+					'',
+					'> [!TIP]',
+					'> Want to check recent activity? Run **GitIQ: Commit Activity (Last 7 Days)**.'
+				);
 
 				await historyPreviewProvider.showPreview('top-contributors', markdownLines.join('\n'));
 				logger?.info('Top contributors displayed successfully.');

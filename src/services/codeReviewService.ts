@@ -657,6 +657,7 @@ export class CodeReviewService {
 	}
 
 	/** Formats the complete review result into a comprehensive Markdown document. */
+	/** Formats the complete review result into a comprehensive, beautifully styled Markdown document. */
 	public formatMarkdownReport(result: {
 		summary: ReviewSummary;
 		findings: readonly ReviewFinding[];
@@ -665,35 +666,47 @@ export class CodeReviewService {
 		const { summary, findings, timestamp } = result;
 		const dateStr = new Date(timestamp).toLocaleString();
 
+		const filesList = summary.filesAnalyzed.length > 0
+			? summary.filesAnalyzed.map((f) => `- \`${f}\``).join('\n')
+			: '- _No specific files listed_';
+
 		const lines: string[] = [
-			'# GitIQ AI Code Review Report',
+			'# 🛡️ GitIQ AI Code Review Report',
 			'',
-			`> **Target:** ${summary.targetLabel}  `,
-			`> **Date:** ${dateStr}  `,
-			`> **Analyzed Files (${summary.filesAnalyzed.length}):** ${summary.filesAnalyzed.join(', ') || 'None'}`,
+			'> [!NOTE]',
+			`> **Review Target:** \`${summary.targetLabel}\`  `,
+			`> **Generated:** ${dateStr}  `,
+			`> **Files Analyzed:** ${summary.filesAnalyzed.length}`,
 			'',
 			'---',
 			'',
-			'## Executive Summary',
+			'## 📊 Executive Summary',
 			'',
 			summary.overallSummary,
 			'',
-			'| Severity | Count |',
-			'| :--- | :--- |',
-			`| 🔴 **Critical** | ${summary.criticalCount} |`,
-			`| 🟠 **High** | ${summary.highCount} |`,
-			`| 🟡 **Medium** | ${summary.mediumCount} |`,
-			`| 🟢 **Low** | ${summary.lowCount} |`,
-			`| **Total Findings** | **${summary.totalFindings}** |`,
+			'### 🎯 Severity & Risk Matrix',
+			'',
+			'| Severity | Risk Classification | Count | Status |',
+			'| :--- | :--- | :---: | :--- |',
+			`| 🔴 **Critical** | Critical security flaw or fatal regression | ${summary.criticalCount} | ${summary.criticalCount > 0 ? '❌ Action Required' : '✅ Clear'} |`,
+			`| 🟠 **High** | High-risk functional defect or performance bug | ${summary.highCount} | ${summary.highCount > 0 ? '⚠️ High Attention' : '✅ Clear'} |`,
+			`| 🟡 **Medium** | Code smell, maintainability, or edge case | ${summary.mediumCount} | ${summary.mediumCount > 0 ? '⚡ Improvements Advised' : '✅ Clear'} |`,
+			`| 🟢 **Low** | Minor style, convention, or documentation | ${summary.lowCount} | ${summary.lowCount > 0 ? 'ℹ️ Low Priority' : '✅ Clear'} |`,
+			`| 📋 **Total Findings** | Aggregated review items | **${summary.totalFindings}** | ${summary.totalFindings === 0 ? '✨ Codebase is Clean' : '🔍 Review Below'} |`,
+			'',
+			'### 📁 Analyzed Files in Scope',
+			'',
+			filesList,
 			'',
 			'---',
 			'',
-			'## Detailed Findings',
+			'## 🔍 Detailed Findings',
 			''
 		];
 
 		if (findings.length === 0) {
-			lines.push('🎉 **No issues detected!** All reviewed changes look safe, clean, and well-structured.');
+			lines.push('> [!TIP]');
+			lines.push('> 🎉 **No issues detected!** All reviewed changes look safe, clean, and well-structured.');
 			return lines.join('\n');
 		}
 
@@ -716,17 +729,26 @@ export class CodeReviewService {
 			const location = lineRange ? `${finding.file} (${lineRange})` : finding.file;
 
 			lines.push(`### ${icon} [${finding.severity}] ${finding.title}`);
-			lines.push(`**File:** \`${location}\` | **Category:** ${finding.category}${finding.confidence === 'Uncertain' ? ' *(Uncertain)*' : ''}`);
 			lines.push('');
-			lines.push(`**Problem:** ${finding.explanation}`);
+			lines.push('| Attribute | Specification |');
+			lines.push('| :--- | :--- |');
+			lines.push(`| 📍 **File Location** | \`${location}\` |`);
+			lines.push(`| 🏷️ **Category** | ${finding.category}${finding.confidence === 'Uncertain' ? ' *(Uncertain)*' : ''} |`);
+			lines.push(`| 🎯 **Confidence** | ${finding.confidence || 'High'} |`);
 			lines.push('');
-			lines.push(`**Why it matters:** ${finding.impact}`);
+			lines.push('#### 🧐 Problem Explanation');
+			lines.push(finding.explanation);
 			lines.push('');
-			lines.push(`**Recommended Fix:** ${finding.recommendation}`);
+			lines.push('#### 💥 Impact & Risk');
+			lines.push('> [!WARNING]');
+			lines.push(`> **Why it matters:** ${finding.impact}`);
+			lines.push('');
+			lines.push('#### 💡 Recommended Fix');
+			lines.push(finding.recommendation);
 
 			if (finding.codeSuggestion) {
 				lines.push('');
-				lines.push('**Suggested Code:**');
+				lines.push('#### 🛠️ Suggested Code Patch');
 				lines.push('```ts');
 				lines.push(finding.codeSuggestion);
 				lines.push('```');
@@ -736,6 +758,9 @@ export class CodeReviewService {
 			lines.push('---');
 			lines.push('');
 		}
+
+		lines.push('> [!TIP]');
+		lines.push('> Re-run **GitIQ: AI Code Review** after applying fixes to verify complete resolution.');
 
 		return lines.join('\n');
 	}

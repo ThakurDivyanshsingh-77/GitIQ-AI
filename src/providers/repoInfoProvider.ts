@@ -31,14 +31,22 @@ export class RepoInfoProvider implements vscode.TextDocumentContentProvider, vsc
 	 */
 	public async showRepositoryInfo(info: RepositoryInfo): Promise<void> {
 		this.content = [
-			`# 📁 Repository Information: ${info.repoName}`,
+			`# 📁 GitIQ — Repository Overview: ${info.repoName}`,
+			``,
+			`> [!NOTE]`,
+			`> **Repository:** \`${info.repoName}\` • **Current Branch:** \`${info.currentBranch}\` • **Lifetime Commits:** **${info.totalCommits}**`,
 			``,
 			`---`,
 			``,
-			`- **Current Branch:** \`${info.currentBranch}\``,
-			`- **Remote Origin:** ${info.remoteUrl}`,
-			`- **Total Commits:** ${info.totalCommits}`,
-			`- **Latest Commit:** ${info.latestCommit}`,
+			`### 📌 Repository Details`,
+			``,
+			`| Property | Value / Description |`,
+			`| :--- | :--- |`,
+			`| 🏷️ **Repository Name** | **${info.repoName}** |`,
+			`| 🌿 **Current Branch** | \`${info.currentBranch}\` |`,
+			`| 🌐 **Remote Origin URL** | \`${info.remoteUrl}\` |`,
+			`| 📦 **Total Commits** | **${info.totalCommits}** |`,
+			`| 🎯 **Latest HEAD Commit** | \`${info.latestCommit}\` |`,
 			``,
 			`---`,
 			``,
@@ -46,7 +54,12 @@ export class RepoInfoProvider implements vscode.TextDocumentContentProvider, vsc
 			``,
 			`\`\`\`text`,
 			info.gitStatus,
-			`\`\`\``
+			`\`\`\``,
+			``,
+			`---`,
+			``,
+			`> [!TIP]`,
+			`> Use **GitIQ: Generate AI Commit Message** to instantly stage and commit your pending changes.`
 		].join('\n');
 
 		this.changeEmitter.fire(this.uri);

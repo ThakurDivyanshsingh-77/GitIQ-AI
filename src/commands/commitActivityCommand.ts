@@ -3,6 +3,7 @@ import type { HistoryPreviewProvider } from '../providers/historyPreviewProvider
 import type { HistoryService } from '../services/historyService';
 import type { LoggerService } from '../services/loggerService';
 import { COMMAND_IDS } from '../utils/constants';
+import { renderProgressBar } from '../utils/markdownUtils';
 
 /**
  * Registers the Commit Activity command handler.
@@ -35,12 +36,38 @@ export function registerCommitActivityCommand(
 				logger?.info('Fetching commit activity for last 7 days...');
 				const activity = await historyService.getCommitActivity(workspacePath, 7);
 
+				const totalWeeklyCommits = activity.reduce((sum, item) => sum + item.count, 0);
+				const maxDaily = Math.max(...activity.map((item) => item.count), 1);
+				const peakDay = activity.slice().sort((a, b) => b.count - a.count)[0];
+				const avgDaily = (totalWeeklyCommits / Math.max(activity.length, 1)).toFixed(1);
+
 				const tableLines = [
-					'# Commit Activity (Last 7 Days)',
+					'# 📅 GitIQ — Commit Activity (Last 7 Days)',
 					'',
-					'| Day | Date | Commits |',
-					'| :--- | :--- | :--- |',
-					...activity.map((item) => `| ${item.dayName} | ${item.dateStr} | ${item.count} commits |`)
+					'> [!NOTE]',
+					`> **Weekly Throughput:** **${totalWeeklyCommits} commits** • **Daily Average:** **${avgDaily} / day** • **Peak Day:** **${peakDay ? `${peakDay.dayName} (${peakDay.count})` : 'N/A'}**`,
+					'',
+					'---',
+					'',
+					'| Day of Week | Calendar Date | Commits | Activity Meter |',
+					'| :--- | :---: | :---: | :--- |',
+					...activity.map((item) => {
+						const bar = renderProgressBar(item.count, maxDaily, 12);
+						return `| **${item.dayName}** | \`${item.dateStr}\` | **${item.count} commits** | \`${bar}\` |`;
+					}),
+					'',
+					'---',
+					'',
+					'### 📊 Weekly Momentum Insights',
+					'',
+					`- **Total Commits This Week:** **${totalWeeklyCommits}**`,
+					`- **Daily Average:** **${avgDaily} commits/day**`,
+					`- **Most Active Date:** ${peakDay ? `**${peakDay.dateStr}** (${peakDay.dayName}) with **${peakDay.count} commits**` : 'N/A'}`,
+					'',
+					'---',
+					'',
+					'> [!TIP]',
+					'> Need a permanent copy? Use **GitIQ: Export Commit History Report** to generate `commit-history-report.md`.'
 				];
 
 				await historyPreviewProvider.showPreview('commit-activity', tableLines.join('\n'));

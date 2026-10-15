@@ -16,13 +16,13 @@ import type { LoggerService } from '../services/loggerService';
 export { GEMINI_DEFAULT_MODEL };
 
 /**
- * AIProvider powered by Google Gemini API via official REST interface.
+ * AIProvider powered by Google Gemini API via official REST interfaces.
  */
 export class GeminiProvider implements AIProvider {
 	public readonly provider = Provider.Gemini;
 	private configuration?: ProviderConfiguration;
 
-	public constructor(private readonly logger?: LoggerService) {}
+	public constructor(private readonly logger?: LoggerService) { }
 
 	public async initialize(configuration: ProviderConfiguration): Promise<void> {
 		const apiKey = configuration.apiKey?.trim();
