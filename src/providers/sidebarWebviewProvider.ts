@@ -1534,6 +1534,21 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			}
 		}
 
+		document.querySelectorAll('.tool-header').forEach(header => {
+			header.addEventListener('click', (e) => {
+				e.stopPropagation();
+				const accordion = header.closest('.tool-accordion');
+				if (accordion) {
+					accordion.classList.toggle('open');
+				}
+			});
+		});
+
+		window.toggleAccordion = toggleAccordion;
+		window.retryDetection = retryDetection;
+		window.openFolder = openFolder;
+		window.initGit = initGit;
+
 		// Handle updates from extension host - registered FIRST before webviewReady handshake
 		window.addEventListener('message', (event) => {
 			const msg = event.data;
@@ -1738,7 +1753,8 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 									'<div class="finding-detail-label">Suggested Code</div>' +
 									'<div class="finding-code-block">' + escapeHtml(f.codeSuggestion) + '</div>' +
 								'</div>';
-											return (
+						}
+						return (
 							'<div class="finding-card" id="' + f.id + '">' +
 								'<div class="finding-header" onclick="toggleFinding(this)">' +
 									'<div class="finding-title-row">' +
@@ -1771,7 +1787,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 						'<div style="display: flex; align-items: center; gap: 6px;">' +
 							'<div class="review-target-badge">' + escapeHtml(sum.targetLabel) + '</div>' +
 							'<button class="review-dismiss-btn" onclick="dismissReview()">✕</button>' +
-						</div>' +
+						'</div>' +
 					'</div>' +
 					'<div class="severity-counts">' +
 						'<span class="severity-pill critical">Critical: ' + sum.criticalCount + '</span>' +
@@ -1845,6 +1861,12 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			var panel = document.getElementById('codeReviewPanel');
 			if (panel) panel.style.display = 'none';
 		}
+
+		window.toggleFinding = toggleFinding;
+		window.openFile = openFile;
+		window.runReviewAgain = runReviewAgain;
+		window.openReport = openReport;
+		window.dismissReview = dismissReview;
 
 		function escapeHtml(text) {
 			if (!text) return '';

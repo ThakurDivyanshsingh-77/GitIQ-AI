@@ -317,6 +317,10 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
     6. **Automated Test Suite**: Added 5 new tests in `test/repositoryDetection.test.cjs` covering worktree `.git` file detection, Git unavailable handling, root path in webview payload, and command execution for `initGit` / `openFolder`. Total tests expanded from 63 to 68 tests (100% passing).
     7. **Synchronous Initial HTML Pre-Rendering**: Added `getInitialRenderState()` in `SidebarWebviewProvider.ts` that synchronously checks `repositoryDetector.state` and falls back to synchronous filesystem inspection of `.git/HEAD` in the workspace folder. This renders the detected repository name and branch immediately into the initial HTML, eliminating any detecting flash or dependency on iframe handshake timing.
     8. **Git API Initialization Single-Flight**: Wrapped `initGitExtension()` in `_initGitApiPromise` to prevent duplicate event listener subscriptions during concurrent extension calls.
+    9. **Webview JavaScript Syntax Fix & Accordion Click Listeners**:
+       - Fixed two SyntaxErrors inside the Webview `<script>` block in `sidebarWebviewProvider.ts`: a missing closing brace on `if (f.codeSuggestion)` in `renderCodeReviewState()` and a missing opening quote on `'</div>' +` in the review header HTML template. These syntax errors had prevented the entire script from executing in the webview, causing all button and accordion click listeners to fail.
+       - Added explicit `addEventListener` click listeners to all `.tool-header` elements to toggle `.tool-accordion` regardless of inline `onclick` handling restrictions in VS Code webviews.
+       - Exported helper methods (`toggleAccordion`, `retryDetection`, `openFolder`, `initGit`, `toggleFinding`, `openFile`, `dismissReview`, `runReviewAgain`, `openReport`) onto `window`.
 
 ---
 
