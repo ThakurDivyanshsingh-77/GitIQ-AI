@@ -69,12 +69,13 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			localResourceRoots: [this.extensionUri]
 		};
 
-		webviewView.webview.html = this.getHtmlForWebview();
+		webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
 
 		webviewView.webview.onDidReceiveMessage(async (data: { command: string; args?: unknown[]; file?: string; line?: number }) => {
 			if (!data || !data.command) {
 				return;
 			}
+			this.logger?.info(`[SidebarWebview] Received command: "${data.command}"`);
 
 			if (data.command === 'webviewReady') {
 				// Immediate handshake: send current state as soon as webview listener is active
@@ -394,7 +395,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				statusDotClass: 'status-dot warning',
 				statusText: 'Open a folder to start working with Git',
 				actionRowHtml:
-					'<button class="repo-action-btn primary" onclick="openFolder()">' +
+					'<button class="repo-action-btn primary" data-action="openFolder">' +
 						'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Open Folder' +
 					'</button>',
 				showSwitchBtn: false,
@@ -456,12 +457,15 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 		};
 	}
 
-	private getHtmlForWebview(): string {
+	private getHtmlForWebview(webview?: vscode.Webview): string {
 		const initial = this.getInitialRenderState();
+		const nonce = getNonce();
+		const cspSource = webview?.cspSource ?? "vscode-webview:";
 		return `<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource}; img-src ${cspSource} https: data:; script-src 'nonce-${nonce}';">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>GitIQ Dashboard</title>
 	<style>
@@ -1236,7 +1240,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 	<div class="tools-list">
 		<!-- Git & GitHub -->
 		<div class="tool-accordion" id="accordion-git">
-			<div class="tool-header" onclick="toggleAccordion('accordion-git')">
+			<div class="tool-header">
 				<div class="tool-icon">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<line x1="6" y1="3" x2="6" y2="15"></line>
@@ -1293,7 +1297,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 
 		<!-- Pull Requests -->
 		<div class="tool-accordion" id="accordion-pr">
-			<div class="tool-header" onclick="toggleAccordion('accordion-pr')">
+			<div class="tool-header">
 				<div class="tool-icon">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="18" cy="18" r="3"></circle>
@@ -1342,7 +1346,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 
 		<!-- Commit Analytics -->
 		<div class="tool-accordion" id="accordion-analytics">
-			<div class="tool-header" onclick="toggleAccordion('accordion-analytics')">
+			<div class="tool-header">
 				<div class="tool-icon">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<line x1="18" y1="20" x2="18" y2="10"></line>
@@ -1386,7 +1390,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 
 		<!-- AI Settings -->
 		<div class="tool-accordion" id="accordion-settings">
-			<div class="tool-header" onclick="toggleAccordion('accordion-settings')">
+			<div class="tool-header">
 				<div class="tool-icon">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<line x1="4" y1="21" x2="4" y2="14"></line>
@@ -1437,7 +1441,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 
 	<div class="footer-note">GitIQ • AI-Powered Git Assistant</div>
 
-	<script>
+	<script nonce="${nonce}">
 		const vscode = acquireVsCodeApi();
 
 		var detectingWatchdog = null;
@@ -1461,10 +1465,10 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 					if (actionRow) {
 						actionRow.style.display = 'flex';
 						actionRow.innerHTML =
-							'<button class="repo-action-btn primary" onclick="retryDetection()">' +
+							'<button class="repo-action-btn primary" data-action="retryDetection">' +
 								'↻ Retry Detection' +
 							'</button>' +
-							'<button class="repo-action-btn" onclick="openFolder()">' +
+							'<button class="repo-action-btn" data-action="openFolder">' +
 								'Open Folder' +
 							'</button>';
 					}
@@ -1500,33 +1504,6 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			vscode.postMessage({ command: 'initGit' });
 		}
 
-		// Attach action card clicks
-		document.querySelectorAll('.action-card, .sub-item-btn').forEach(btn => {
-			btn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				const cmd = btn.getAttribute('data-cmd');
-				if (cmd) {
-					vscode.postMessage({ command: cmd });
-				}
-			});
-		});
-
-		// Refresh button
-		document.getElementById('refreshBtn').addEventListener('click', (e) => {
-			e.stopPropagation();
-			retryDetection();
-		});
-
-		// Switch Repo button
-		const switchRepoBtn = document.getElementById('switchRepoBtn');
-		if (switchRepoBtn) {
-			switchRepoBtn.addEventListener('click', (e) => {
-				e.stopPropagation();
-				vscode.postMessage({ command: 'selectRepo' });
-			});
-		}
-
-		// Toggle accordions
 		function toggleAccordion(id) {
 			const el = document.getElementById(id);
 			if (el) {
@@ -1534,14 +1511,80 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			}
 		}
 
-		document.querySelectorAll('.tool-header').forEach(header => {
-			header.addEventListener('click', (e) => {
-				e.stopPropagation();
-				const accordion = header.closest('.tool-accordion');
+		// Unified event delegation on document handles all clicks reliably without inline onclick
+		document.addEventListener('click', function(e) {
+			if (!e.target) return;
+
+			// 1. Tool accordion toggle
+			var header = e.target.closest('.tool-header');
+			if (header) {
+				var accordion = header.closest('.tool-accordion');
 				if (accordion) {
 					accordion.classList.toggle('open');
 				}
-			});
+				return;
+			}
+
+			// 2. Action cards and sub-item buttons
+			var actionBtn = e.target.closest('.action-card, .sub-item-btn');
+			if (actionBtn) {
+				var cmd = actionBtn.getAttribute('data-cmd');
+				if (cmd) {
+					vscode.postMessage({ command: cmd });
+				}
+				return;
+			}
+
+			// 3. Repo action row buttons
+			var repoBtn = e.target.closest('.repo-action-btn');
+			if (repoBtn) {
+				var action = repoBtn.getAttribute('data-action');
+				if (action === 'openFolder') openFolder();
+				else if (action === 'initGit') initGit();
+				else if (action === 'retryDetection') retryDetection();
+				return;
+			}
+
+			// 4. Code review finding toggle
+			var findingHeader = e.target.closest('.finding-header');
+			if (findingHeader) {
+				var card = findingHeader.closest('.finding-card');
+				if (card) card.classList.toggle('open');
+				return;
+			}
+
+			// 5. Code review file link
+			var fileLink = e.target.closest('.finding-file-link');
+			if (fileLink) {
+				var file = fileLink.getAttribute('data-file');
+				var line = parseInt(fileLink.getAttribute('data-line') || '1', 10);
+				vscode.postMessage({ command: 'openFileAtLine', file: file, line: line });
+				return;
+			}
+
+			// 6. Review panel buttons
+			var reviewBtn = e.target.closest('.review-btn, .review-dismiss-btn');
+			if (reviewBtn) {
+				var revAction = reviewBtn.getAttribute('data-action');
+				if (revAction === 'dismissReview') dismissReview();
+				else if (revAction === 'reviewAgain') runReviewAgain();
+				else if (revAction === 'openReport') openReport();
+				return;
+			}
+
+			// 7. Refresh button
+			var refreshBtn = e.target.closest('#refreshBtn');
+			if (refreshBtn) {
+				retryDetection();
+				return;
+			}
+
+			// 8. Switch repo button
+			var switchBtn = e.target.closest('#switchRepoBtn');
+			if (switchBtn) {
+				vscode.postMessage({ command: 'selectRepo' });
+				return;
+			}
 		});
 
 		window.toggleAccordion = toggleAccordion;
@@ -1890,4 +1933,13 @@ function escapeHtmlServer(text: string): string {
 		.replace(/>/g, '&gt;')
 		.replace(/"/g, '&quot;')
 		.replace(/'/g, '&#39;');
+}
+
+function getNonce(): string {
+	let text = '';
+	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	for (let i = 0; i < 32; i++) {
+		text += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return text;
 }
