@@ -2,7 +2,7 @@
   "name": "gitiq",
   "displayName": "GitIQ",
   "description": "AI-Powered Git Assistant for Visual Studio Code",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "gitiq",
   "icon": "icon.png",
   "license": "MIT",

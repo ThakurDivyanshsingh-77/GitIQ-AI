@@ -1956,11 +1956,6 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			if (!text) return '';
 			return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 		}
-
-		function escapeJs(text) {
-			if (!text) return '';
-			return String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-		}
 	</script>
 </body>
 </html>`;

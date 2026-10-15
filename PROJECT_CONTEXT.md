@@ -332,6 +332,11 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
        - **SVG Pointer Events Normalization**: Added `svg, svg * { pointer-events: none; }` to the webview CSS so clicks on action cards, icons, or buttons always cleanly target the parent container and trigger command delegation.
        - **Resilient Event Delegation & Safe Handshake**: Added `findClosest()` DOM traversal helper with `parentElement` fallback, safe `acquireVsCodeApi()` error handling with console diagnostics, and relaxed CSP to allow `${cspSource}` within `script-src`.
        - **Packaged Production Binary**: Re-packaged `gitiq-1.1.1.vsix` with test and scratch directories excluded in `.vscodeignore`. All 68 test suites passing cleanly.
+    12. **Version 1.1.2 - Fix Webview Client Script SyntaxError**:
+       - **Root Cause Identified**: Webview console revealed `Uncaught SyntaxError: Failed to execute 'write' on 'Document': Invalid regular expression: /\/g, '\\').replace(/: Unmatched ')'` caused by an unused `escapeJs()` function placed inside the ES6 template literal in `sidebarWebviewProvider.ts`. In template string literals, escaped backslashes `\\` were collapsed into single slashes `\/`, creating an unescaped regex literal that halted all script execution on load.
+       - **Removed Malformed Helper**: Completely deleted the unused `escapeJs()` function, restoring full, error-free client script parsing.
+       - **Verified Webview Script**: Validated client script in mock DOM and verified 100% test pass rate across all 68 suites.
+       - **Packaged Production Binary**: Packaged `gitiq-1.1.2.vsix`.
 
 ---
 
