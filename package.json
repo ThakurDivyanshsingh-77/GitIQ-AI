@@ -2,7 +2,7 @@
   "name": "gitiq",
   "displayName": "GitIQ",
   "description": "AI-Powered Git Assistant for Visual Studio Code",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "gitiq",
   "icon": "icon.png",
   "license": "MIT",
@@ -40,7 +40,14 @@
   "bugs": {
     "url": "https://github.com/ThakurDivyanshsingh-77/CommitPilot-AI/issues"
   },
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:gitiq.sidebarView",
+    "workspaceContains:.git",
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [

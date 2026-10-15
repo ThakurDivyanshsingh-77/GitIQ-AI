@@ -465,7 +465,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource}; img-src ${cspSource} https: data:; script-src 'nonce-${nonce}';">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource}; img-src ${cspSource} https: data:; script-src 'nonce-${nonce}' ${cspSource};">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>GitIQ Dashboard</title>
 	<style>
@@ -488,6 +488,10 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			box-sizing: border-box;
 			margin: 0;
 			padding: 0;
+		}
+
+		svg, svg * {
+			pointer-events: none;
 		}
 
 		body {
@@ -1442,7 +1446,25 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 	<div class="footer-note">GitIQ • AI-Powered Git Assistant</div>
 
 	<script nonce="${nonce}">
-		const vscode = acquireVsCodeApi();
+		var vscode;
+		try {
+			vscode = acquireVsCodeApi();
+			console.log('[GitIQ Webview] VS Code API acquired successfully');
+		} catch (err) {
+			console.error('[GitIQ Webview] Failed to acquire VS Code API:', err);
+		}
+
+		function postMsg(data) {
+			if (vscode && typeof vscode.postMessage === 'function') {
+				try {
+					vscode.postMessage(data);
+				} catch (err) {
+					console.error('[GitIQ Webview] Failed to post message:', err);
+				}
+			} else {
+				console.warn('[GitIQ Webview] vscode.postMessage is not available');
+			}
+		}
 
 		var detectingWatchdog = null;
 
@@ -1489,11 +1511,11 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			}
 			if (repoRootPathEl) repoRootPathEl.style.display = 'none';
 			startWatchdog();
-			vscode.postMessage({ command: 'refresh' });
+			postMsg({ command: 'refresh' });
 		}
 
 		function openFolder() {
-			vscode.postMessage({ command: 'openFolder' });
+			postMsg({ command: 'openFolder' });
 		}
 
 		function initGit() {
@@ -1501,7 +1523,7 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			var statusTextEl = document.getElementById('statusText');
 			if (statusDotEl) statusDotEl.className = 'status-dot loading';
 			if (statusTextEl) statusTextEl.textContent = 'Initializing Git repository...';
-			vscode.postMessage({ command: 'initGit' });
+			postMsg({ command: 'initGit' });
 		}
 
 		function toggleAccordion(id) {
@@ -1511,73 +1533,97 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			}
 		}
 
+		// Helper to find closest element matching a selector or attribute
+		function findClosest(el, selector) {
+			if (!el) return null;
+			if (typeof el.closest === 'function') {
+				try {
+					var match = el.closest(selector);
+					if (match) return match;
+				} catch (_) {}
+			}
+			var curr = el;
+			while (curr && curr !== document && curr.nodeType === 1) {
+				if (curr.matches && curr.matches(selector)) {
+					return curr;
+				}
+				curr = curr.parentElement;
+			}
+			return null;
+		}
+
 		// Unified event delegation on document handles all clicks reliably without inline onclick
 		document.addEventListener('click', function(e) {
-			if (!e.target) return;
+			try {
+				if (!e.target) return;
 
-			// 1. Tool accordion toggle
-			var header = e.target.closest('.tool-header');
-			if (header) {
-				var accordion = header.closest('.tool-accordion');
-				if (accordion) {
-					accordion.classList.toggle('open');
+				// 1. Tool accordion toggle
+				var header = findClosest(e.target, '.tool-header');
+				if (header) {
+					var accordion = findClosest(header, '.tool-accordion');
+					if (accordion) {
+						accordion.classList.toggle('open');
+					}
+					return;
 				}
-				return;
-			}
 
-			// 2. Action cards and sub-item buttons with data-cmd
-			var cmdBtn = e.target.closest('[data-cmd]');
-			if (cmdBtn) {
-				var cmd = cmdBtn.getAttribute('data-cmd');
-				if (cmd) {
-					vscode.postMessage({ command: cmd });
+				// 2. Action cards and sub-item buttons with data-cmd
+				var cmdBtn = findClosest(e.target, '[data-cmd]');
+				if (cmdBtn) {
+					var cmd = cmdBtn.getAttribute('data-cmd');
+					if (cmd) {
+						console.log('[GitIQ Webview] Invoking command from UI:', cmd);
+						postMsg({ command: cmd });
+					}
+					return;
 				}
-				return;
-			}
 
-			// 3. Actions with data-action attribute
-			var actionBtn = e.target.closest('[data-action]');
-			if (actionBtn) {
-				var action = actionBtn.getAttribute('data-action');
-				if (action === 'openFolder') openFolder();
-				else if (action === 'initGit') initGit();
-				else if (action === 'retryDetection') retryDetection();
-				else if (action === 'selectRepo') vscode.postMessage({ command: 'selectRepo' });
-				else if (action === 'dismissReview') dismissReview();
-				else if (action === 'reviewAgain') runReviewAgain();
-				else if (action === 'openReport') openReport();
-				return;
-			}
+				// 3. Actions with data-action attribute
+				var actionBtn = findClosest(e.target, '[data-action]');
+				if (actionBtn) {
+					var action = actionBtn.getAttribute('data-action');
+					if (action === 'openFolder') openFolder();
+					else if (action === 'initGit') initGit();
+					else if (action === 'retryDetection') retryDetection();
+					else if (action === 'selectRepo') postMsg({ command: 'selectRepo' });
+					else if (action === 'dismissReview') dismissReview();
+					else if (action === 'reviewAgain') runReviewAgain();
+					else if (action === 'openReport') openReport();
+					return;
+				}
 
-			// 4. Code review finding toggle
-			var findingHeader = e.target.closest('.finding-header');
-			if (findingHeader) {
-				var card = findingHeader.closest('.finding-card');
-				if (card) card.classList.toggle('open');
-				return;
-			}
+				// 4. Code review finding toggle
+				var findingHeader = findClosest(e.target, '.finding-header');
+				if (findingHeader) {
+					var card = findClosest(findingHeader, '.finding-card');
+					if (card) card.classList.toggle('open');
+					return;
+				}
 
-			// 5. Code review file link
-			var fileLink = e.target.closest('.finding-file-link');
-			if (fileLink) {
-				var file = fileLink.getAttribute('data-file');
-				var line = parseInt(fileLink.getAttribute('data-line') || '1', 10);
-				vscode.postMessage({ command: 'openFileAtLine', file: file, line: line });
-				return;
-			}
+				// 5. Code review file link
+				var fileLink = findClosest(e.target, '.finding-file-link');
+				if (fileLink) {
+					var file = fileLink.getAttribute('data-file');
+					var line = parseInt(fileLink.getAttribute('data-line') || '1', 10);
+					postMsg({ command: 'openFileAtLine', file: file, line: line });
+					return;
+				}
 
-			// 6. Refresh button
-			var refreshBtn = e.target.closest('#refreshBtn');
-			if (refreshBtn) {
-				retryDetection();
-				return;
-			}
+				// 6. Refresh button
+				var refreshBtn = findClosest(e.target, '#refreshBtn');
+				if (refreshBtn) {
+					retryDetection();
+					return;
+				}
 
-			// 7. Switch repo button
-			var switchBtn = e.target.closest('#switchRepoBtn');
-			if (switchBtn) {
-				vscode.postMessage({ command: 'selectRepo' });
-				return;
+				// 7. Switch repo button
+				var switchBtn = findClosest(e.target, '#switchRepoBtn');
+				if (switchBtn) {
+					postMsg({ command: 'selectRepo' });
+					return;
+				}
+			} catch (err) {
+				console.error('[GitIQ Webview] Click handling error:', err);
 			}
 		});
 
@@ -1735,7 +1781,8 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 
 		// Handshake: Notify extension host AFTER listener is registered
 		startWatchdog();
-		vscode.postMessage({ command: 'webviewReady' });
+		console.log('[GitIQ Webview] Sending webviewReady handshake');
+		postMsg({ command: 'webviewReady' });
 
 		function renderCodeReviewState(state) {
 			var panel = document.getElementById('codeReviewPanel');
@@ -1883,15 +1930,15 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 			e.stopPropagation();
 			var file = linkEl.getAttribute('data-file');
 			var line = parseInt(linkEl.getAttribute('data-line') || '1', 10);
-			vscode.postMessage({ command: 'openFileAtLine', file: file, line: line });
+			postMsg({ command: 'openFileAtLine', file: file, line: line });
 		}
 
 		function runReviewAgain() {
-			vscode.postMessage({ command: '${COMMAND_IDS.aiCodeReview}' });
+			postMsg({ command: '${COMMAND_IDS.aiCodeReview}' });
 		}
 
 		function openReport() {
-			vscode.postMessage({ command: 'gitIQ.showCodeReviewReport' });
+			postMsg({ command: 'gitIQ.showCodeReviewReport' });
 		}
 
 		function dismissReview() {

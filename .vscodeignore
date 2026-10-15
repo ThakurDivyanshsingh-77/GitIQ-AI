@@ -4,6 +4,10 @@
 .vscodeignore
 eslint.config.mjs
 src/**
+test/**
+scripts/**
+docs/**
+.agents/**
 tsconfig.json
 **/*.map
 **/*.ts

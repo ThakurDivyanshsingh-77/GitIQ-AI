@@ -326,6 +326,12 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
        - Removed every remaining inline `onclick` attribute across dynamic HTML elements (`updateRepoState`, `renderCodeReviewState`, action rows) and replaced them with `data-action` attributes.
        - Implemented clean, unified event delegation on `document.addEventListener('click', ...)` handling `[data-cmd]`, `[data-action]`, `.tool-header`, `.finding-header`, `.finding-file-link`, `#refreshBtn`, and `#switchRepoBtn`.
        - Re-bundled `out/extension.js` via `npm run compile` and verified zero syntax errors in webview script (`checkScript.js`) and 100% tests passing (`68/68 passed`).
+    11. **Version 1.1.1 - Live Marketplace Activation & Webview Interaction Fixes**:
+       - **Explicit Activation Events**: Added `"onView:gitiq.sidebarView"`, `"workspaceContains:.git"`, and `"onStartupFinished"` to `package.json`'s `activationEvents` so VS Code immediately initializes GitIQ and detects repositories upon opening a project.
+       - **Official Git Extension Dependency**: Declared `"extensionDependencies": ["vscode.git"]` in `package.json` to guarantee VS Code's internal Git extension is activated before GitIQ boots, eliminating the asynchronous initialization race condition.
+       - **SVG Pointer Events Normalization**: Added `svg, svg * { pointer-events: none; }` to the webview CSS so clicks on action cards, icons, or buttons always cleanly target the parent container and trigger command delegation.
+       - **Resilient Event Delegation & Safe Handshake**: Added `findClosest()` DOM traversal helper with `parentElement` fallback, safe `acquireVsCodeApi()` error handling with console diagnostics, and relaxed CSP to allow `${cspSource}` within `script-src`.
+       - **Packaged Production Binary**: Re-packaged `gitiq-1.1.1.vsix` with test and scratch directories excluded in `.vscodeignore`. All 68 test suites passing cleanly.
 
 ---
 
