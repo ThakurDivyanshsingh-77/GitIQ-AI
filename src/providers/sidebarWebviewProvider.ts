@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { GitService } from '../services/gitService';
@@ -146,6 +147,9 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 		// Push initial state
 		if (this.repositoryDetector) {
 			void this.pushRepoState();
+			if (this.repositoryDetector.state.status === 'detecting') {
+				void this.repositoryDetector.detectRepositories();
+			}
 		} else {
 			void this.updateState();
 		}
@@ -356,7 +360,104 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 		}
 	}
 
+	/**
+	 * Computes the initial repository render state synchronously to eliminate
+	 * any loading/detecting flash in the webview.
+	 */
+	private getInitialRenderState(): {
+		repoName: string;
+		statusDotClass: string;
+		statusText: string;
+		rootPath?: string;
+		actionRowHtml?: string;
+		showSwitchBtn: boolean;
+		switchCount: number;
+	} {
+		const current = this.repositoryDetector?.state;
+		if (current && current.status === 'detected' && current.activeRepo) {
+			const active = current.activeRepo;
+			const summary = active.statusSummary ? ' • ' + active.statusSummary : '';
+			return {
+				repoName: active.repoName,
+				statusDotClass: 'status-dot',
+				statusText: active.branch + summary,
+				rootPath: active.rootPath,
+				showSwitchBtn: current.allRepos.length > 1,
+				switchCount: current.allRepos.length
+			};
+		}
+
+		const workspaceFolders = vscode.workspace.workspaceFolders;
+		if (!workspaceFolders || workspaceFolders.length === 0) {
+			return {
+				repoName: 'No Workspace Open',
+				statusDotClass: 'status-dot warning',
+				statusText: 'Open a folder to start working with Git',
+				actionRowHtml:
+					'<button class="repo-action-btn primary" onclick="openFolder()">' +
+						'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Open Folder' +
+					'</button>',
+				showSwitchBtn: false,
+				switchCount: 0
+			};
+		}
+
+		const folderPath = workspaceFolders[0].uri.fsPath;
+		const folderName = path.basename(folderPath);
+
+		try {
+			const gitDirPath = path.join(folderPath, '.git');
+			if (fs.existsSync(gitDirPath)) {
+				let branch = 'main';
+				try {
+					let headPath = path.join(gitDirPath, 'HEAD');
+					const stat = fs.statSync(gitDirPath);
+					if (stat.isFile()) {
+						// Worktree .git file containing "gitdir: <path>"
+						const gitdirContent = fs.readFileSync(gitDirPath, 'utf8').trim();
+						const match = gitdirContent.match(/^gitdir:\s*(.+)$/i);
+						if (match && match[1]) {
+							const resolvedGitDir = path.isAbsolute(match[1]) ? match[1] : path.resolve(folderPath, match[1]);
+							headPath = path.join(resolvedGitDir, 'HEAD');
+						}
+					}
+					if (fs.existsSync(headPath)) {
+						const headContent = fs.readFileSync(headPath, 'utf8').trim();
+						const refMatch = headContent.match(/^ref:\s*refs\/heads\/(.+)$/);
+						if (refMatch && refMatch[1]) {
+							branch = refMatch[1];
+						} else if (/^[0-9a-f]{40}$/i.test(headContent)) {
+							branch = headContent.slice(0, 7);
+						}
+					}
+				} catch {
+					branch = 'main';
+				}
+
+				return {
+					repoName: folderName,
+					statusDotClass: 'status-dot',
+					statusText: branch,
+					rootPath: folderPath,
+					showSwitchBtn: false,
+					switchCount: 1
+				};
+			}
+		} catch {
+			// Fall through to detecting state
+		}
+
+		return {
+			repoName: folderName,
+			statusDotClass: 'status-dot loading',
+			statusText: 'Detecting repository...',
+			showSwitchBtn: false,
+			switchCount: 0
+		};
+	}
+
 	private getHtmlForWebview(): string {
+		const initial = this.getInitialRenderState();
 		return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1038,11 +1139,11 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 	<!-- Current Repository Card -->
 	<div class="section-header">
 		<span>CURRENT REPOSITORY</span>
-		<button class="repo-switch-btn" id="switchRepoBtn" title="Switch active Git repository" style="display: none;">
+		<button class="repo-switch-btn" id="switchRepoBtn" title="Switch active Git repository" style="${initial.showSwitchBtn ? 'display: inline-flex;' : 'display: none;'}">
 			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16"/>
 			</svg>
-			<span id="repoCountText">Switch</span>
+			<span id="repoCountText">${initial.switchCount > 1 ? `Switch (${initial.switchCount})` : 'Switch'}</span>
 		</button>
 	</div>
 	<div class="repo-card" id="repoCard">
@@ -1058,14 +1159,14 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 				<circle cx="6" cy="18" r="3"></circle>
 				<path d="M18 9a9 9 0 0 1-9 9"></path>
 			</svg>
-			<span id="repoName">Detecting...</span>
+			<span id="repoName">${escapeHtmlServer(initial.repoName)}</span>
 		</div>
-		<div class="repo-root-path" id="repoRootPath" style="display: none;"></div>
+		<div class="repo-root-path" id="repoRootPath" style="${initial.rootPath ? 'display: block;' : 'display: none;'}">${escapeHtmlServer(initial.rootPath || '')}</div>
 		<div class="repo-status-row">
-			<div class="status-dot loading" id="statusDot"></div>
-			<span id="statusText">Detecting repository...</span>
+			<div class="${initial.statusDotClass}" id="statusDot"></div>
+			<span id="statusText">${escapeHtmlServer(initial.statusText)}</span>
 		</div>
-		<div class="repo-action-row" id="repoActionRow" style="display: none;"></div>
+		<div class="repo-action-row" id="repoActionRow" style="${initial.actionRowHtml ? 'display: flex;' : 'display: none;'}">${initial.actionRowHtml || ''}</div>
 	</div>
 
 	<!-- Quick Actions Grid -->
@@ -1758,4 +1859,13 @@ export class SidebarWebviewProvider implements vscode.WebviewViewProvider, vscod
 </body>
 </html>`;
 	}
+}
+
+function escapeHtmlServer(text: string): string {
+	return String(text)
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
 }

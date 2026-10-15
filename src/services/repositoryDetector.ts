@@ -48,6 +48,7 @@ export class RepositoryDetector implements vscode.Disposable {
 
 	private _selectedRepoId?: string;
 	private _gitApi?: GitAPI;
+	private _initGitApiPromise?: Promise<GitAPI | undefined>;
 	private _isDisposed = false;
 
 	// Single-flight and debouncing management
@@ -126,6 +127,21 @@ export class RepositoryDetector implements vscode.Disposable {
 	 * Connects to the built-in VS Code Git extension API if available.
 	 */
 	public async initGitExtension(): Promise<GitAPI | undefined> {
+		if (this._gitApi) {
+			return this._gitApi;
+		}
+		if (this._initGitApiPromise) {
+			return this._initGitApiPromise;
+		}
+		this._initGitApiPromise = this.doInitGitExtension();
+		try {
+			return await this._initGitApiPromise;
+		} finally {
+			this._initGitApiPromise = undefined;
+		}
+	}
+
+	private async doInitGitExtension(): Promise<GitAPI | undefined> {
 		if (this._gitApi) {
 			return this._gitApi;
 		}

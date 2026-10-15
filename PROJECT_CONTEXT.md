@@ -315,6 +315,8 @@ Exposed via both standalone stdio server (`out/mcp/server.js`) and VS Code Langu
        - **Detection Error**: Displays error dot, failure message, and "↻ Retry Detection" button.
        - Fixed webview script order: mounted `window.addEventListener('message')` *before* sending `webviewReady`.
     6. **Automated Test Suite**: Added 5 new tests in `test/repositoryDetection.test.cjs` covering worktree `.git` file detection, Git unavailable handling, root path in webview payload, and command execution for `initGit` / `openFolder`. Total tests expanded from 63 to 68 tests (100% passing).
+    7. **Synchronous Initial HTML Pre-Rendering**: Added `getInitialRenderState()` in `SidebarWebviewProvider.ts` that synchronously checks `repositoryDetector.state` and falls back to synchronous filesystem inspection of `.git/HEAD` in the workspace folder. This renders the detected repository name and branch immediately into the initial HTML, eliminating any detecting flash or dependency on iframe handshake timing.
+    8. **Git API Initialization Single-Flight**: Wrapped `initGitExtension()` in `_initGitApiPromise` to prevent duplicate event listener subscriptions during concurrent extension calls.
 
 ---
 
